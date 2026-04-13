@@ -1,0 +1,59 @@
+---
+title: "What is OpenBookings? Hotel search platform overview"
+description: "OpenBookings is an open-source hotel booking platform. Search hotels by destination, compare real-time prices, and book with passwordless authentication."
+---
+
+OpenBookings is an open-source hotel booking platform that helps travelers find and compare available hotel rooms anywhere in the world. You type a destination, choose your dates and guest count, and OpenBookings returns a ranked list of available properties with dynamically calculated nightly rates — all in real time. No account required to search, and signing up takes seconds with no password to remember.
+
+## What OpenBookings offers
+
+<CardGroup cols={2}>
+  <Card title="Destination search" icon="magnifying-glass">
+    Type any city name and get instant typeahead suggestions. OpenBookings resolves your destination to geographic coordinates and searches all available properties within a 250 km radius.
+  </Card>
+  <Card title="Real-time availability" icon="calendar">
+    Every search queries live room inventory. Results only include rooms that are actually available for your selected dates and guest count.
+  </Card>
+  <Card title="Dynamic pricing" icon="tag">
+    Nightly rates reflect current rate plans, date-specific overrides, length-of-stay discounts, early-bird deals, last-minute rates, and extra-guest surcharges — all calculated at search time.
+  </Card>
+  <Card title="Passwordless sign-in" icon="key">
+    Sign in with a magic link sent to your email, or with your Google or Apple account. No passwords to create or forget.
+  </Card>
+  <Card title="Map view" icon="map">
+    Switch to a map layout to see available properties plotted geographically near your destination.
+  </Card>
+  <Card title="Open source" icon="code">
+    OpenBookings is fully open source. The platform is built on Next.js and PostgreSQL, and the source code is available on GitHub.
+  </Card>
+</CardGroup>
+
+## Who OpenBookings is for
+
+OpenBookings serves two audiences:
+
+- **Travelers** using the web app at [openbookings.co](https://openbookings.co) to search for and book hotel rooms.
+- **Developers** integrating OpenBookings search into their own applications via the `GET /api/query` REST endpoint.
+
+This documentation covers both. The **Docs** tab walks through the traveler experience and platform features. The **API Reference** tab covers the search endpoint and data types in detail.
+
+## How it solves common booking frustrations
+
+Most booking platforms require you to create an account before you can see prices, hide fees until checkout, and lock you into a single sort order. OpenBookings shows you real, fully calculated prices upfront — including any discounts you qualify for — with no account wall on search, and lets you filter by the criteria that matter to you.
+
+## Start here
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Search for hotels in under 5 minutes — in the app or via the API.
+  </Card>
+  <Card title="Authentication" icon="lock" href="/authentication">
+    Learn how magic-link and social sign-in work.
+  </Card>
+  <Card title="Hotel Search API" icon="terminal" href="/api/hotel-search">
+    Full reference for the `GET /api/query` endpoint.
+  </Card>
+  <Card title="Pricing & discounts" icon="percent" href="/features/pricing">
+    Understand how rates and modifiers are applied.
+  </Card>
+</CardGroup>

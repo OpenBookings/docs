@@ -1,0 +1,93 @@
+---
+title: "Magic-link sign-in endpoint — POST /api/auth"
+description: "Reference for the OpenBookings magic-link authentication endpoint: request body, success response, expiry, error handling, and curl and fetch examples."
+---
+
+The magic-link endpoint triggers a sign-in email to the supplied address. When the user clicks the link in that email, OpenBookings verifies the token and redirects them to the URL you specify. The link is valid for 15 minutes. This is the only credential-based auth flow available over the REST API — there is no password endpoint.
+
+## Endpoint
+
+```
+POST https://openbookings.co/api/auth/magic-link/send-magic-link
+```
+
+## Request headers
+
+| Header | Value |
+|--------|-------|
+| `Content-Type` | `application/json` |
+
+## Request body
+
+<ParamField body="email" type="string" required>
+  The user's email address. A magic-link sign-in email is sent to this address.
+</ParamField>
+
+<ParamField body="callbackURL" type="string" required>
+  The URL the user is redirected to after clicking the magic link and completing verification. Use your application's home page or the page the user was trying to reach.
+</ParamField>
+
+## Response
+
+**200 — success**
+
+The API accepted the request and dispatched the email. The response body confirms the operation.
+
+```json
+{
+  "status": "ok"
+}
+```
+
+<Note>
+  A 200 response means the request was valid and the email was queued — it does not confirm that the user's inbox received it. If the address does not exist in the system, the email may still be sent as part of the sign-up flow.
+</Note>
+
+## Magic-link expiry
+
+<Warning>
+  Magic links expire after **15 minutes**. If the user attempts to sign in after that window, the link will be invalid. Prompt the user to request a new link if they receive an expiry error.
+</Warning>
+
+## Code examples
+
+<CodeGroup>
+
+```bash curl
+curl --request POST \
+  --url https://openbookings.co/api/auth/magic-link/send-magic-link \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "email": "user@example.com",
+    "callbackURL": "https://openbookings.co"
+  }'
+```
+
+```javascript fetch
+const response = await fetch(
+  "https://openbookings.co/api/auth/magic-link/send-magic-link",
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      email: "user@example.com",
+      callbackURL: "https://openbookings.co",
+    }),
+  }
+);
+
+if (!response.ok) {
+  const err = await response.json();
+  throw new Error(err.error ?? "Failed to send magic link");
+}
+
+// Email dispatched — notify the user to check their inbox
+```
+
+</CodeGroup>
+
+## Full sign-in flow
+
+For a step-by-step walkthrough of how a magic-link sign-in maps to the full user session lifecycle, see [Authentication](/api/authentication).

@@ -1,0 +1,166 @@
+---
+title: "Search for Hotels — OpenBookings Guide"
+description: "Learn how to search for hotels by destination, dates, and guest count using the OpenBookings web app and the GET /api/query REST endpoint."
+---
+
+OpenBookings makes it easy to find available hotel rooms anywhere in the world. You enter a destination, pick your travel dates, specify your party size, and the platform returns a ranked list of options — cheapest first. Whether you're using the web interface or calling the API directly, the same search engine runs behind every query.
+
+## Using the search UI
+
+The search box sits in the bottom-right corner of the home page. It has three fields you fill in before hitting **Find my trip**.
+
+<Steps>
+  <Step title="Choose a destination">
+    Click the **Destination** field. A search overlay opens with a text input powered by Algolia. Start typing a city name — results appear within a couple of keystrokes, showing the city name and country. Click a result to confirm your destination. The selected city's coordinates (latitude and longitude) are stored automatically and passed to the search API.
+
+    <Tip>
+      You do not need to type a full city name — partial matches work. Results appear after just a couple of characters.
+    </Tip>
+  </Step>
+
+  <Step title="Select your dates">
+    Click the date field (labelled **From / Till**). A two-month calendar opens. Click your check-in date first, then your check-out date. Both dates are stored in `YYYY-MM-DD` format. The number of nights between the two dates determines how pricing modifiers such as length-of-stay discounts are calculated.
+
+    <Note>
+      You must select both a check-in and a check-out date before searching. Single-night stays are supported.
+    </Note>
+  </Step>
+
+  <Step title="Set your guest count">
+    Click the **Guests** field. A selector opens with three counters:
+
+    - **Adults** — guests aged 13 or above (minimum 0)
+    - **Children** — guests aged 0–12 (minimum 0)
+    - **Rooms** — number of rooms required (minimum 1)
+
+    Use the **+** and **−** buttons to adjust each value. The search filters out any room that cannot accommodate your declared adult and child count, so you only see rooms that can actually fit your party.
+  </Step>
+
+  <Step title="Run the search">
+    Click **Find my trip**. OpenBookings passes the destination coordinates, dates, and guest numbers to `GET /api/query` and returns a sorted list of available rooms.
+  </Step>
+</Steps>
+
+## How the search works
+
+When you submit a search, OpenBookings looks for active hotel rooms within **250 km** of the coordinates returned for your chosen city. It then filters those rooms so that only rooms whose `max_adults` and `max_children` capacity cover your party are included. Finally, the results are sorted by `total_price` ascending — the cheapest available option for each hotel appears first.
+
+<Note>
+  Each hotel contributes at most one room to the results list: the cheapest eligible room for your dates and party size. If a hotel has multiple room types that all fit your group, only the lowest-priced one is shown.
+</Note>
+
+## Calling the API directly
+
+The search endpoint is a standard HTTP `GET` request. All parameters are passed as query string values.
+
+```
+GET /api/query
+```
+
+### Required parameters
+
+| Parameter  | Type    | Description                                          |
+| ---------- | ------- | ---------------------------------------------------- |
+| `lat`      | number  | Latitude of the destination (decimal degrees)        |
+| `lon`      | number  | Longitude of the destination (decimal degrees)       |
+| `checkin`  | string  | Arrival date in `YYYY-MM-DD` format                  |
+| `checkout` | string  | Departure date in `YYYY-MM-DD` format                |
+| `adults`   | integer | Number of adult guests (aged 13+)                    |
+| `rooms`    | integer | Number of rooms required                             |
+
+### Optional parameters
+
+| Parameter  | Type    | Description                                          |
+| ---------- | ------- | ---------------------------------------------------- |
+| `children` | integer | Number of child guests (aged 0–12), defaults to `0` |
+
+### Example request
+
+The following request searches for hotels near central London for two adults checking in on 1 July 2026 and checking out on 5 July 2026.
+
+<CodeGroup>
+
+```bash cURL
+curl "https://openbookings.co/api/query?lat=51.5074&lon=-0.1278&checkin=2026-07-01&checkout=2026-07-05&adults=2&rooms=1"
+```
+
+```javascript fetch
+const params = new URLSearchParams({
+  lat: "51.5074",
+  lon: "-0.1278",
+  checkin: "2026-07-01",
+  checkout: "2026-07-05",
+  adults: "2",
+  rooms: "1",
+});
+
+const response = await fetch(`/api/query?${params}`);
+const hotels = await response.json();
+```
+
+```python requests
+import requests
+
+params = {
+    "lat": 51.5074,
+    "lon": -0.1278,
+    "checkin": "2026-07-01",
+    "checkout": "2026-07-05",
+    "adults": 2,
+    "rooms": 1,
+}
+
+response = requests.get("https://openbookings.co/api/query", params=params)
+hotels = response.json()
+```
+
+</CodeGroup>
+
+### Example response
+
+The API returns a JSON array. Each element represents the cheapest available room for one hotel, sorted by `total_price` ascending.
+
+```json
+[
+  {
+    "hotel_id": "a1b2c3d4",
+    "hotel_name": "The Kensington",
+    "hotel_slug": "the-kensington",
+    "city": "London",
+    "country": "United Kingdom",
+    "room_id": "r9x8y7z6",
+    "room_name": "Classic Double",
+    "room_description": "A comfortable double room with garden views.",
+    "base_occupancy": 2,
+    "max_adults": 2,
+    "max_children": 1,
+    "rate_plan_id": "rp-001",
+    "rate_plan_name": "Flexible Rate",
+    "currency": "GBP",
+    "is_refundable": true,
+    "cancellation_policy": "Free cancellation up to 48 hours before check-in.",
+    "min_stay": 1,
+    "max_stay": null,
+    "subtotal": 640.00,
+    "total_price": 576.00,
+    "applied_modifiers": ["early_bird"]
+  }
+]
+```
+
+### Error responses
+
+If any required parameter is missing or cannot be parsed as a number, the API returns HTTP `400` with a JSON body listing the problems.
+
+```json
+{
+  "errors": [
+    "lat is required",
+    "checkin is required"
+  ]
+}
+```
+
+<Warning>
+  Coordinates must be valid decimal numbers. Passing a string such as `"London"` for `lat` or `lon` will result in a `400` error.
+</Warning>

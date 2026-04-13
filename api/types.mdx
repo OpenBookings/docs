@@ -1,0 +1,206 @@
+---
+title: "TypeScript types — OpenBookings API reference"
+description: "TypeScript interface definitions for the OpenBookings API: HotelSearchInput, HotelSearchResult, ResolvedRoom, ModifierType, and AdjustmentType."
+---
+
+This page documents the TypeScript types you can use when integrating the OpenBookings API in a TypeScript project. Copy them directly into your codebase or import them from a shared types package. `ResolvedRoom` is the authoritative shape of every object in the array returned by `GET /api/query`.
+
+## `HotelSearchInput`
+
+The parameter object that maps to the query string of `GET /api/query`. Use this type to build and validate your search request before sending it to the API.
+
+```typescript
+/** Input parameters for the hotel/room search query */
+export interface HotelSearchInput {
+  lat: number;
+  lon: number;
+  checkin: string;   // YYYY-MM-DD
+  checkout: string;  // YYYY-MM-DD
+  adults: number;
+  children: number | null;
+  rooms: number;
+}
+```
+
+| Field | Type | Required | Notes |
+|-------|------|----------|-------|
+| `lat` | `number` | Yes | Latitude of the search center |
+| `lon` | `number` | Yes | Longitude of the search center |
+| `checkin` | `string` | Yes | Check-in date, `YYYY-MM-DD` |
+| `checkout` | `string` | Yes | Check-out date, `YYYY-MM-DD` |
+| `adults` | `number` | Yes | Number of adult guests |
+| `children` | `number \| null` | No | Number of child guests; `null` treated as `0` |
+| `rooms` | `number` | Yes | Number of rooms |
+
+---
+
+## `HotelSearchResult`
+
+A simplified type that represents a basic room result. The live API returns `ResolvedRoom` objects, not `HotelSearchResult` objects. This type is retained for reference but you should use `ResolvedRoom` when typing API responses.
+
+```typescript
+/** Simplified room result — use ResolvedRoom for live API responses */
+export interface HotelSearchResult {
+  property_id: string;
+  property_name: string;
+  city: string;
+  country: string;
+  room_id: string;
+  room_name: string;
+  room_description: string;
+  price_per_night: number;
+  total_price: number;
+  currency: string;
+}
+```
+
+<Note>
+  `HotelSearchResult` is a simplified type. The live `GET /api/query` endpoint returns `ResolvedRoom` objects, which include pricing detail, modifier fields, rate plan data, and occupancy constraints not present here.
+</Note>
+
+---
+
+## `ResolvedRoom`
+
+The actual response type returned by `GET /api/query`. Every element of the response array conforms to this interface.
+
+```typescript
+export interface ResolvedRoom {
+  // Hotel
+  hotel_id: string;
+  hotel_name: string;
+  hotel_slug: string;
+  city: string;
+  country: string;
+
+  // Room
+  room_id: string;
+  room_name: string;
+  room_description: string;
+  base_occupancy: number;
+  max_adults: number;
+  max_children: number;
+
+  // Rate plan
+  rate_plan_id: string;
+  rate_plan_name: string;
+  currency: string;
+  is_refundable: boolean;
+  cancellation_policy: string;
+  min_stay: number;
+  max_stay: number | null;
+
+  // Pricing (calculated)
+  subtotal: number;           // sum of nightly base prices
+  total_price: number;        // after all modifiers applied
+  applied_modifiers: ModifierType[];
+}
+```
+
+<Expandable title="Field descriptions">
+  <ResponseField name="hotel_id" type="string">
+    Unique identifier for the property.
+  </ResponseField>
+  <ResponseField name="hotel_name" type="string">
+    Display name of the hotel.
+  </ResponseField>
+  <ResponseField name="hotel_slug" type="string">
+    URL-friendly slug for building deep links to the property page.
+  </ResponseField>
+  <ResponseField name="city" type="string">
+    City where the property is located.
+  </ResponseField>
+  <ResponseField name="country" type="string">
+    Country where the property is located.
+  </ResponseField>
+  <ResponseField name="room_id" type="string">
+    Unique identifier for the room type.
+  </ResponseField>
+  <ResponseField name="room_name" type="string">
+    Display name of the room (e.g. "Deluxe King").
+  </ResponseField>
+  <ResponseField name="room_description" type="string">
+    Full text description of the room.
+  </ResponseField>
+  <ResponseField name="base_occupancy" type="number">
+    Number of guests covered by the standard nightly rate. Extra guests above this count may trigger the `extra_guest` modifier.
+  </ResponseField>
+  <ResponseField name="max_adults" type="number">
+    Maximum number of adult guests the room can accommodate.
+  </ResponseField>
+  <ResponseField name="max_children" type="number">
+    Maximum number of child guests the room can accommodate.
+  </ResponseField>
+  <ResponseField name="rate_plan_id" type="string">
+    Unique identifier for the rate plan.
+  </ResponseField>
+  <ResponseField name="rate_plan_name" type="string">
+    Display name of the rate plan.
+  </ResponseField>
+  <ResponseField name="currency" type="string">
+    ISO 4217 currency code for all price fields.
+  </ResponseField>
+  <ResponseField name="is_refundable" type="boolean">
+    Whether the rate allows cancellation for a full refund.
+  </ResponseField>
+  <ResponseField name="cancellation_policy" type="string">
+    Human-readable cancellation terms.
+  </ResponseField>
+  <ResponseField name="min_stay" type="number">
+    Minimum number of nights required under this rate plan.
+  </ResponseField>
+  <ResponseField name="max_stay" type="number | null">
+    Maximum number of nights allowed. `null` means no upper limit.
+  </ResponseField>
+  <ResponseField name="subtotal" type="number">
+    Sum of nightly base prices before stay-level discounts (`length_of_stay`, `early_bird`) are applied. Rounded to two decimal places.
+  </ResponseField>
+  <ResponseField name="total_price" type="number">
+    Final price after all modifiers. This is the amount to display to the guest. Rounded to two decimal places.
+  </ResponseField>
+  <ResponseField name="applied_modifiers" type="ModifierType[]">
+    List of modifier types that changed the price. Empty array means no modifiers fired.
+  </ResponseField>
+</Expandable>
+
+---
+
+## `ModifierType`
+
+A union of the rate modifier categories the pricing engine supports. These strings appear in `ResolvedRoom.applied_modifiers`.
+
+```typescript
+type ModifierType =
+  | 'day_of_week'
+  | 'length_of_stay'
+  | 'early_bird'
+  | 'last_minute'
+  | 'extra_guest'
+```
+
+| Value | Description |
+|-------|-------------|
+| `day_of_week` | Surcharge applied to nights that fall on specific days of the week |
+| `length_of_stay` | Discount for stays that meet a minimum night threshold |
+| `early_bird` | Discount for bookings made a set number of days before arrival |
+| `last_minute` | Adjustment applied when booking close to the arrival date |
+| `extra_guest` | Per-night surcharge for each guest above `base_occupancy` |
+
+<Note>
+  Only one discount modifier (`length_of_stay` or `early_bird`) can fire per room. The eligible modifier with the lowest configured `sort_order` takes precedence. Surcharge modifiers can all fire simultaneously.
+</Note>
+
+---
+
+## `AdjustmentType`
+
+Specifies whether a modifier's `adjustment_value` is a fixed currency amount or a percentage of the subtotal.
+
+```typescript
+type AdjustmentType = 'flat' | 'percent'
+```
+
+| Value | Description |
+|-------|-------------|
+| `flat` | A fixed currency amount added to or subtracted from the price |
+| `percent` | A percentage of the relevant base or subtotal amount |

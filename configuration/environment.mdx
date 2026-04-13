@@ -1,0 +1,61 @@
+---
+title: 'Browser settings and local preferences in OpenBookings'
+description: 'How OpenBookings stores preferences in your browser, including background images and date formatting — no account settings required.'
+---
+
+OpenBookings is designed to work without manual configuration. Most settings are handled automatically by the service — but a handful of lightweight preferences are stored directly in your browser, giving you control over your local experience without needing to touch an account settings page.
+
+## What your browser stores
+
+OpenBookings uses two browser storage mechanisms to remember your preferences between visits.
+
+### Background image
+
+The home page displays a fullscreen background image. OpenBookings remembers which image was last shown so it can rotate through options across sessions.
+
+| Storage type | Key | What it holds |
+|---|---|---|
+| `localStorage` | `openbookings_background` | Identifier of the last displayed background image |
+| Cache API | `openbookings-backgrounds` | Cached image files for fast loading |
+
+If you want a fresh background image immediately, you can clear either or both of these:
+
+<Steps>
+  <Step title="Open your browser's DevTools">
+    Press `F12` (or `Cmd+Option+I` on Mac) to open developer tools, then navigate to the **Application** tab (Chrome/Edge) or **Storage** tab (Firefox).
+  </Step>
+  <Step title="Clear localStorage">
+    Under **Local Storage**, find your OpenBookings domain, select the `openbookings_background` key, and delete it.
+  </Step>
+  <Step title="Clear the image cache">
+    Under **Cache Storage**, find `openbookings-backgrounds` and delete the cache. You can also clear all site data using your browser's **Clear browsing data** dialog.
+  </Step>
+  <Step title="Reload the page">
+    Refresh OpenBookings. A new background image will load and be saved for your next visit.
+  </Step>
+</Steps>
+
+<Tip>
+  The quickest option is to use your browser's built-in **Clear site data** feature. In Chrome, go to Settings → Privacy and security → Delete browsing data, or right-click the address bar lock icon and choose "Site settings → Clear data".
+</Tip>
+
+### Date and locale formatting
+
+OpenBookings displays check-in and check-out dates using your browser's locale setting. No configuration is required — the app reads the language and region your browser reports and formats dates accordingly.
+
+<Note>
+  To change how dates appear, update your browser's language preference. In Chrome, go to Settings → Languages. In Firefox, go to Settings → General → Language. The date format on OpenBookings will reflect your updated preference on the next page load.
+</Note>
+
+## What OpenBookings does not store locally
+
+OpenBookings does not write passwords, payment details, or personal information to your browser's local storage. Your booking history and account data are stored securely on the server and tied to your account, not to any one device or browser.
+
+<CardGroup cols={2}>
+  <Card title="Sign in to your account" icon="user" href="/authentication">
+    Your bookings and account details are available after signing in.
+  </Card>
+  <Card title="Third-party integrations" icon="plug" href="/configuration/integrations">
+    Learn which services power the OpenBookings experience.
+  </Card>
+</CardGroup>

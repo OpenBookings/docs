@@ -1,0 +1,51 @@
+---
+title: "Authenticate requests to the OpenBookings API"
+description: "How API clients authenticate with OpenBookings: the open hotel search endpoint, magic-link sign-in flow, social login, and session management."
+---
+
+OpenBookings uses two distinct authentication models depending on which part of the API you are integrating. The hotel search endpoint (`GET /api/query`) is publicly accessible with no credentials required. User-facing sign-in flows use a magic link delivered by email, which produces a session cookie your client can include on subsequent requests.
+
+## Hotel search — no authentication required
+
+The `GET /api/query` endpoint is open. You do not need an API key, bearer token, or session cookie to search for hotel availability. Pass your search parameters as query string values and you will receive results immediately.
+
+<Note>
+  Because the search endpoint is public, avoid exposing sensitive user data (such as saved itineraries or booking history) through it. Use session-authenticated endpoints for anything user-specific.
+</Note>
+
+## Magic-link sign-in
+
+Users authenticate by requesting a one-time sign-in link sent to their email address. The link expires after 15 minutes. The flow consists of three steps:
+
+<Steps>
+  <Step title="Request a magic link">
+    Your client sends a `POST` request to `/api/auth/magic-link/send-magic-link` with the user's email and the URL you want the user redirected to after sign-in.
+
+    ```bash
+    curl --request POST \
+      --url https://openbookings.co/api/auth/magic-link/send-magic-link \
+      --header 'Content-Type: application/json' \
+      --data '{"email": "user@example.com", "callbackURL": "https://openbookings.co"}'
+    ```
+
+    On success you receive an HTTP 200 response. The API sends an email to the address immediately.
+  </Step>
+  <Step title="User clicks the link">
+    The email contains a one-time URL. When the user clicks it, their browser is directed to the OpenBookings auth service, which verifies the token and redirects to the `callbackURL` you specified.
+
+    <Warning>
+      Magic links expire after 15 minutes. If the user does not click within that window, ask them to request a new link.
+    </Warning>
+  </Step>
+  <Step title="Session cookie is set">
+    After successful verification, the auth service sets an HTTP-only session cookie on the user's browser. Your application can read the authenticated session from this cookie on subsequent requests.
+  </Step>
+</Steps>
+
+## Social login
+
+OpenBookings supports Google and Apple sign-in in addition to magic-link email. These flows are browser-based and redirect the user to the provider's sign-in page before returning them to OpenBookings. There is no direct REST endpoint for social login — users must complete these flows through the web app's sign-in form.
+
+## Session handling
+
+After a successful sign-in — via magic link or social login — the user's browser holds a session. Your application can call authenticated API endpoints on behalf of that session for as long as it remains active. To end the session, the user clicks their profile avatar to sign out.

@@ -1,0 +1,89 @@
+---
+title: "OpenBookings REST API: endpoints and response format"
+description: "A concise reference for the OpenBookings REST API: base URL, available endpoints, response format, error codes, and rate-limiting guidance."
+---
+
+The OpenBookings REST API lets you search hotel availability and manage user authentication from any HTTP client. All endpoints are served from `https://openbookings.co` and return JSON. There is no SDK requirement — a standard `fetch` call or `curl` command is enough to get started.
+
+## Base URL
+
+```
+https://openbookings.co
+```
+
+## Available endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/query` | Search hotel availability near a location |
+| `POST` | `/api/auth/magic-link/send-magic-link` | Request a magic-link sign-in email |
+
+## Request format
+
+`GET` requests pass all parameters as URL query strings. `POST` requests must send a JSON body and include the following header:
+
+```
+Content-Type: application/json
+```
+
+## Response format
+
+All responses return JSON. Successful responses return the resource directly (an array for search results, an object for auth operations). There is no top-level wrapper object on success.
+
+```json
+// Successful hotel search — returns an array
+[
+  {
+    "hotel_id": "prop_abc123",
+    "hotel_name": "Seaside Grand",
+    "total_price": 420.00
+  }
+]
+```
+
+## Error format
+
+Errors use one of two shapes depending on the endpoint:
+
+**Validation errors** (HTTP 400) — returned when one or more request parameters are missing or invalid:
+
+```json
+{
+  "errors": ["lat is required", "checkout is required"]
+}
+```
+
+**Server errors** (HTTP 500) — returned when an unexpected internal failure occurs:
+
+```json
+{
+  "error": "Database error"
+}
+```
+
+## HTTP status codes
+
+| Code | Meaning |
+|------|---------|
+| `200` | Request succeeded |
+| `400` | One or more parameters are missing or invalid |
+| `500` | Internal server error |
+
+## Rate limiting
+
+API requests are rate-limited. If you exceed the limit, you will receive an error response. Implement retry logic with exponential backoff in any production integration to handle transient rate-limit responses gracefully.
+
+<Tip>
+  Start with a retry delay of one second and double it on each subsequent attempt, up to a maximum of 30 seconds.
+</Tip>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="lock" href="/api/authentication">
+    Learn how users sign in and how sessions work.
+  </Card>
+  <Card title="Hotel search" icon="magnifying-glass" href="/api/hotel-search">
+    Full parameter and response reference for `GET /api/query`.
+  </Card>
+</CardGroup>

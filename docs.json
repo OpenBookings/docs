@@ -1,0 +1,89 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "name": "OpenBookings",
+  "theme": "almond",
+  "favicon": "https://media.brand.dev/cc1ae665-a00e-4b37-a4c2-3b906aab2ac9.png",
+  "colors": {
+    "primary": "#fcaa5c",
+    "light": "#545484",
+    "dark": "#a4acc4"
+  },
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/OpenBookings/OB-Web-App"
+    }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Docs",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "authentication"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/search",
+              "features/pricing",
+              "features/map"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/booking-flow",
+              "guides/guest-management",
+              "guides/pricing-modifiers"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/environment",
+              "configuration/integrations"
+            ]
+          },
+          {
+            "group": "Help",
+            "pages": [
+              "faq",
+              "troubleshooting"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api/overview",
+              "api/authentication"
+            ]
+          },
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api/hotel-search",
+              "api/auth-magic-link"
+            ]
+          },
+          {
+            "group": "Data Types",
+            "pages": [
+              "api/types"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,78 @@
+---
+title: 'Third-party integrations powering OpenBookings'
+description: 'The services behind OpenBookings — destination search, interactive maps, authentication, and cookie consent — and what they mean for your experience.'
+---
+
+OpenBookings is built on a small set of carefully chosen third-party services. Each one handles a specific part of the experience — from the moment you type a destination to the map that shows you hotels nearby. This page describes what each integration does and how it affects what you see and interact with.
+
+## Destination search
+
+Destination search is powered by [Algolia](https://www.algolia.com), a hosted search service. As you type in the destination field, OpenBookings queries the `Cities` index on Algolia and returns matching city names in real time.
+
+<Card title="Instant destination suggestions" icon="magnifying-glass">
+  Results appear as you type — no need to press Enter or wait for a full page load. The index covers cities worldwide, so whether you're searching for a major capital or a smaller destination, suggestions appear immediately.
+</Card>
+
+Algolia processes the text of your search query to return ranked results. No account information or personal data is sent to Algolia as part of a destination search.
+
+## Interactive map
+
+The map view is built with [MapLibre GL](https://maplibre.org) and rendered using map tiles from [MapTiler](https://www.maptiler.com). When you search for hotels near a destination, the map displays pins for available properties in that area.
+
+<CardGroup cols={2}>
+  <Card title="MapLibre GL" icon="map">
+    An open-source library that renders the interactive map in your browser. It handles zoom, pan, and hotel pin placement.
+  </Card>
+  <Card title="MapTiler" icon="layer-group">
+    Provides the underlying map tiles — the visual street and terrain imagery that appears behind the hotel pins.
+  </Card>
+</CardGroup>
+
+<Note>
+  Your browser requests map tiles directly from MapTiler's servers as you navigate the map. MapTiler's standard privacy policy applies to those tile requests.
+</Note>
+
+## Authentication
+
+OpenBookings offers three ways to sign in. There are no passwords — authentication is either handled through a one-time email link or delegated entirely to Google or Apple.
+
+<CardGroup cols={3}>
+  <Card title="Magic-link email" icon="envelope">
+    Enter your email address and you'll receive a sign-in link. Click it and you're in — no password required. Links expire after 15 minutes.
+  </Card>
+  <Card title="Google Sign-In" icon="google">
+    Sign in with your existing Google account. You're redirected to Google's sign-in page and returned to OpenBookings after authenticating.
+  </Card>
+  <Card title="Apple Sign-In" icon="apple">
+    Sign in with your Apple ID. Apple's privacy-preserving sign-in flow is fully supported, including the option to hide your email address.
+  </Card>
+</CardGroup>
+
+Whichever method you choose, OpenBookings receives only the information needed to identify your account — typically your email address. No passwords are ever stored.
+
+<Tip>
+  If you use Apple's "Hide My Email" option, OpenBookings will receive a private relay address from Apple. Magic-link emails and any transactional messages will be delivered to that relay address and forwarded to your real inbox.
+</Tip>
+
+## Cookie consent
+
+On your first visit, OpenBookings displays a cookie consent banner managed by [CookieYes](https://www.cookieyes.com). This banner is required to comply with GDPR and similar privacy regulations.
+
+<Steps>
+  <Step title="Banner appears on first visit">
+    When you open OpenBookings for the first time in a browser, the CookieYes banner appears at the bottom of the screen before you interact with the site.
+  </Step>
+  <Step title="You choose your preferences">
+    You can accept all cookies, reject non-essential cookies, or customise your preferences by category (such as analytics or functional cookies).
+  </Step>
+  <Step title="Your choice is remembered">
+    CookieYes stores your consent decision in your browser. The banner will not appear again unless you clear your cookies or change your preferences.
+  </Step>
+  <Step title="Change your mind at any time">
+    You can update your cookie preferences at any time by clicking the cookie settings link in the footer of any page.
+  </Step>
+</Steps>
+
+<Note>
+  CookieYes loads from `cdn-cookieyes.com` and records your consent choices. It operates under its own privacy policy. Your consent preferences are stored in your browser and do not require an OpenBookings account.
+</Note>

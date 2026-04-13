@@ -1,0 +1,251 @@
+---
+title: "Hotel search endpoint — GET /api/query"
+description: "Complete reference for GET /api/query: all query parameters, response fields, pricing modifiers, error codes, and working curl and fetch examples."
+---
+
+The hotel search endpoint returns available rooms near a geographic point for a given set of dates and guests. It searches within a 250 km radius, applies all active rate modifiers, and returns the cheapest eligible room for each hotel, sorted by total price ascending. No authentication is required.
+
+## Endpoint
+
+```
+GET https://openbookings.co/api/query
+```
+
+## Request parameters
+
+All parameters are passed as URL query string values.
+
+<ParamField query="lat" type="number" required>
+  Latitude of the search center point, in decimal degrees. Combined with `lon` to define the search origin.
+</ParamField>
+
+<ParamField query="lon" type="number" required>
+  Longitude of the search center point, in decimal degrees. Combined with `lat` to define the search origin.
+</ParamField>
+
+<ParamField query="checkin" type="string" required>
+  Check-in date in `YYYY-MM-DD` format (e.g. `2026-07-14`). Must be before `checkout`.
+</ParamField>
+
+<ParamField query="checkout" type="string" required>
+  Check-out date in `YYYY-MM-DD` format (e.g. `2026-07-21`). Must be after `checkin`.
+</ParamField>
+
+<ParamField query="adults" type="number" required>
+  Number of adult guests. Only rooms whose `max_adults` is greater than or equal to this value are returned.
+</ParamField>
+
+<ParamField query="children" type="number">
+  Number of child guests. Defaults to `0` when omitted. Only rooms whose `max_children` is greater than or equal to this value are returned.
+</ParamField>
+
+<ParamField query="rooms" type="number" required>
+  Number of rooms requested. Passed through to the search context but pricing is calculated per room.
+</ParamField>
+
+## Search behaviour
+
+- Results are filtered to properties within **250 km** of the supplied coordinates.
+- Only rooms where `is_active = true` and the matching rate plan is active are considered.
+- Guest count is enforced: `adults ≤ max_adults` and `children ≤ max_children`.
+- One room per hotel is returned — the room with the lowest `total_price` after modifiers.
+- Results are sorted by `total_price` ascending.
+
+## Pricing
+
+Each room has a `subtotal` (sum of nightly base prices before stay-level adjustments) and a `total_price` (after all applicable modifiers fire). The `applied_modifiers` array tells you which modifier types contributed to the final price.
+
+Modifier types that can appear in `applied_modifiers`:
+
+| Type | Description |
+|------|-------------|
+| `day_of_week` | Surcharge applied to specific days of the week |
+| `length_of_stay` | Discount for stays meeting a minimum night threshold |
+| `early_bird` | Discount for bookings made sufficiently far in advance |
+| `last_minute` | Surcharge applied when booking close to the arrival date |
+| `extra_guest` | Per-night surcharge for guests above base occupancy |
+
+<Note>
+  Only one discount modifier (`length_of_stay` or `early_bird`) can fire per room — whichever is eligible and has the lowest `sort_order` wins. Surcharge modifiers (`day_of_week`, `last_minute`, `extra_guest`) can all fire independently.
+</Note>
+
+## Response
+
+A successful response is an array of `ResolvedRoom` objects.
+
+<ResponseField name="hotel_id" type="string">
+  Unique identifier for the property.
+</ResponseField>
+
+<ResponseField name="hotel_name" type="string">
+  Display name of the hotel.
+</ResponseField>
+
+<ResponseField name="hotel_slug" type="string">
+  URL-friendly slug for the hotel, suitable for building deep-link URLs.
+</ResponseField>
+
+<ResponseField name="city" type="string">
+  City where the property is located.
+</ResponseField>
+
+<ResponseField name="country" type="string">
+  Country where the property is located.
+</ResponseField>
+
+<ResponseField name="room_id" type="string">
+  Unique identifier for the room.
+</ResponseField>
+
+<ResponseField name="room_name" type="string">
+  Display name of the room type (e.g. "Deluxe King").
+</ResponseField>
+
+<ResponseField name="room_description" type="string">
+  Full description of the room.
+</ResponseField>
+
+<ResponseField name="base_occupancy" type="number">
+  Number of guests the room accommodates at the standard rate. Guests above this count may trigger the `extra_guest` modifier.
+</ResponseField>
+
+<ResponseField name="max_adults" type="number">
+  Maximum number of adult guests the room can accommodate.
+</ResponseField>
+
+<ResponseField name="max_children" type="number">
+  Maximum number of child guests the room can accommodate.
+</ResponseField>
+
+<ResponseField name="rate_plan_id" type="string">
+  Unique identifier for the rate plan applied to this result.
+</ResponseField>
+
+<ResponseField name="rate_plan_name" type="string">
+  Display name of the rate plan (e.g. "Best Available Rate").
+</ResponseField>
+
+<ResponseField name="currency" type="string">
+  ISO 4217 currency code for all price fields (e.g. `"USD"`, `"EUR"`).
+</ResponseField>
+
+<ResponseField name="is_refundable" type="boolean">
+  Whether this rate plan allows a full refund under its cancellation policy.
+</ResponseField>
+
+<ResponseField name="cancellation_policy" type="string">
+  Human-readable description of the cancellation terms.
+</ResponseField>
+
+<ResponseField name="min_stay" type="number">
+  Minimum number of nights required to book this room under this rate plan.
+</ResponseField>
+
+<ResponseField name="max_stay" type="number | null">
+  Maximum number of nights allowed. `null` means no upper limit.
+</ResponseField>
+
+<ResponseField name="subtotal" type="number">
+  Sum of nightly base prices for the stay, before stay-level modifiers (e.g. `length_of_stay`, `early_bird`) are applied. Rounded to two decimal places.
+</ResponseField>
+
+<ResponseField name="total_price" type="number">
+  Final price after all applicable modifiers have been applied. This is the amount to display to the guest. Rounded to two decimal places.
+</ResponseField>
+
+<ResponseField name="applied_modifiers" type="string[]">
+  List of modifier type strings that fired during price calculation. Possible values: `"day_of_week"`, `"length_of_stay"`, `"early_bird"`, `"last_minute"`, `"extra_guest"`. An empty array means no modifiers changed the base price.
+</ResponseField>
+
+## Error responses
+
+**400 — validation error**
+
+Returned when one or more required parameters are missing or cannot be parsed as the expected type.
+
+```json
+{
+  "errors": [
+    "lat is required",
+    "checkout is required"
+  ]
+}
+```
+
+**500 — server error**
+
+Returned when an unexpected internal error occurs (e.g. a database failure).
+
+```json
+{
+  "error": "Database error"
+}
+```
+
+## Code examples
+
+<CodeGroup>
+
+```bash curl
+curl --request GET \
+  "https://openbookings.co/api/query?lat=48.8566&lon=2.3522&checkin=2026-07-14&checkout=2026-07-21&adults=2&children=0&rooms=1"
+```
+
+```javascript fetch
+const params = new URLSearchParams({
+  lat: "48.8566",
+  lon: "2.3522",
+  checkin: "2026-07-14",
+  checkout: "2026-07-21",
+  adults: "2",
+  children: "0",
+  rooms: "1",
+});
+
+const response = await fetch(
+  `https://openbookings.co/api/query?${params}`
+);
+
+if (!response.ok) {
+  const err = await response.json();
+  // err.errors — array of validation messages
+  // err.error  — single server error message
+  throw new Error(JSON.stringify(err));
+}
+
+const rooms = await response.json();
+// rooms is ResolvedRoom[]
+console.log(rooms[0].hotel_name, rooms[0].total_price);
+```
+
+</CodeGroup>
+
+**Example response**
+
+```json
+[
+  {
+    "hotel_id": "prop_abc123",
+    "hotel_name": "Hôtel du Marais",
+    "hotel_slug": "hotel-du-marais",
+    "city": "Paris",
+    "country": "France",
+    "room_id": "room_xyz789",
+    "room_name": "Classic Double",
+    "room_description": "A comfortable double room with city views.",
+    "base_occupancy": 2,
+    "max_adults": 2,
+    "max_children": 1,
+    "rate_plan_id": "rp_001",
+    "rate_plan_name": "Best Available Rate",
+    "currency": "EUR",
+    "is_refundable": true,
+    "cancellation_policy": "Free cancellation up to 48 hours before check-in.",
+    "min_stay": 1,
+    "max_stay": null,
+    "subtotal": 840.00,
+    "total_price": 756.00,
+    "applied_modifiers": ["early_bird"]
+  }
+]
+```

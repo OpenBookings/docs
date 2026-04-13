@@ -1,0 +1,102 @@
+{
+  "projectType": "saas",
+  "projectName": "OpenBookings",
+  "projectDescription": "An open-source hotel booking platform that lets travelers search properties by destination and dates, compare pricing, and book with magic-link or social authentication.",
+  "theme": "almond",
+  "primaryColor": "#fcaa5c",
+  "lightColor": "#545484",
+  "darkColor": "#a4acc4",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Docs",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "authentication"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/search",
+              "features/pricing",
+              "features/map"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/booking-flow",
+              "guides/guest-management",
+              "guides/pricing-modifiers"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/environment",
+              "configuration/integrations"
+            ]
+          },
+          {
+            "group": "Help",
+            "pages": [
+              "faq",
+              "troubleshooting"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api/overview",
+              "api/authentication"
+            ]
+          },
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api/hotel-search",
+              "api/auth-magic-link"
+            ]
+          },
+          {
+            "group": "Data Types",
+            "pages": [
+              "api/types"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Destination search powered by Algolia with city typeahead",
+    "Hotel availability search with geo-radius filtering (250 km)",
+    "Dynamic pricing engine with early-bird, last-minute, length-of-stay, day-of-week, and extra-guest modifiers",
+    "Magic-link email authentication (no passwords required)",
+    "Google and Apple social sign-in",
+    "Interactive map view of nearby properties",
+    "Multi-room, multi-guest selection",
+    "Refundable and non-refundable rate plans",
+    "Fullscreen hero UI with destination photography"
+  ],
+  "publicApiSurface": [
+    "GET /api/query — hotel availability search (lat, lon, checkin, checkout, adults, children, rooms)",
+    "POST /api/auth/[...all] — Better Auth unified auth handler",
+    "POST /api/auth/login-link — send magic-link email",
+    "HotelSearchInput — TypeScript interface for search parameters",
+    "HotelSearchResult — TypeScript interface for search results",
+    "ResolvedRoom — pricing-resolved room result with applied_modifiers",
+    "resolveSearchResults() — pricing calculator returning cheapest room per hotel",
+    "resolveRoom() — single-room pricing resolver"
+  ]
+}

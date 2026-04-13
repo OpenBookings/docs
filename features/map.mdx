@@ -1,0 +1,61 @@
+---
+title: "Interactive Hotel Map — OpenBookings Guide"
+description: "Explore hotels near your destination on an interactive map powered by MapLibre GL and MapTiler, showing property locations and distance from the city center."
+---
+
+The OpenBookings map view gives you a spatial perspective on your search results. Instead of scrolling through a list, you can see exactly where each hotel sits relative to the city center, landmarks, and each other — making it easier to choose a location that suits your itinerary.
+
+## Navigating to the map
+
+The map is available at the `/map` route of the OpenBookings web app. You can navigate to it directly from a browser or link to it from your own application if you are building on top of the platform.
+
+<Steps>
+  <Step title="Run a search">
+    Complete a destination, date, and guest search from the home page as described in the [Search guide](/features/search). This establishes the area you want to explore.
+  </Step>
+
+  <Step title="Open the map view">
+    Navigate to `/map`. The map loads centred on your search area and displays pins for properties that match your search criteria.
+  </Step>
+
+  <Step title="Explore the map">
+    Pan and zoom freely. Use the on-screen map controls to zoom in and out, or use your mouse scroll wheel and drag gestures on touch devices.
+  </Step>
+</Steps>
+
+## What you see on the map
+
+The map renders as a full-screen, dark-themed canvas. Each hotel in the search results area is marked with a pin. Clicking a pin surfaces the property name and other details so you can assess location before committing to a booking.
+
+The map is intentionally minimal: it gives you geographic context without cluttering the view. You can see:
+
+- **Property pins** — one per hotel, positioned at the property's exact coordinates
+- **Distance from center** — because the search radius is 250 km from your chosen city coordinates, all visible properties are within that radius
+- **Map controls** — zoom in, zoom out, and reset bearing, accessible from the corner of the map
+
+<Note>
+  The map initially centers on New York City (longitude −74.006, latitude 40.7128) at zoom level 11 when no search context is present. Once a search is active, the center shifts to reflect your chosen destination.
+</Note>
+
+## Map technology
+
+The map is rendered using **MapLibre GL**, an open-source WebGL-based mapping library, with map tiles and styles served by **MapTiler**. This combination gives you smooth vector tile rendering, fluid zoom transitions, and support for both light and dark themes.
+
+<Tip>
+  MapLibre GL runs entirely in your browser using WebGL. For the best experience, use a modern browser with hardware acceleration enabled. The map degrades gracefully if WebGL is unavailable, but interactivity will be limited.
+</Tip>
+
+## Browser and device support
+
+The map works on any modern desktop or mobile browser that supports WebGL. Pan and zoom work with:
+
+- **Desktop** — click and drag to pan, scroll wheel to zoom
+- **Touch devices** — single-finger drag to pan, pinch to zoom
+
+<Warning>
+  Some privacy-focused browser configurations or extensions that block canvas fingerprinting may interfere with WebGL-based maps. If the map fails to load, try disabling browser extensions or using a different browser profile.
+</Warning>
+
+## Using the map alongside search results
+
+The map and the search results list are complementary. Use the list to compare prices and room details, and use the map to verify that a hotel's location works for your trip. Properties visible on the map correspond to the same results returned by `GET /api/query` for your search parameters — the same 250 km radius and the same guest-capacity filters apply.

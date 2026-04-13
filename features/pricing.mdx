@@ -1,0 +1,121 @@
+---
+title: "How hotel pricing works in OpenBookings"
+description: "Understand how OpenBookings calculates nightly rates, applies modifiers like weekend surcharges and early-bird discounts, and arrives at a final total price."
+---
+
+OpenBookings calculates the price for a stay using a layered system: it starts with a base nightly rate, applies any date-specific overrides, and then runs a set of modifiers — surcharges or discounts — on top. The final price you see in search results already has all eligible modifiers applied, so there are no hidden fees added at checkout beyond what the search returns.
+
+## Base rate (BAR)
+
+Every room is configured with a **Best Available Rate (BAR)** — the standard nightly price when no special conditions apply. When you search for dates, each night of your stay starts at this BAR figure. If a property has set a specific price override for a particular date range, that override price replaces the BAR for the nights it covers.
+
+The `subtotal` field in the API response represents the sum of all nightly base prices (after overrides) plus any surcharges, but before discounts. The `total_price` field reflects the final amount after discounts are also applied.
+
+```
+subtotal  = sum of nightly prices + surcharges
+total_price = subtotal − discounts
+```
+
+## Refundable vs. non-refundable rates
+
+Every rate plan is either refundable or non-refundable. The `is_refundable` field in each search result tells you which applies, and the `cancellation_policy` field provides the full policy text. Non-refundable rates are typically cheaper but carry no cancellation flexibility.
+
+## Price modifiers
+
+Properties can configure modifiers that adjust the price based on the conditions of your booking. Modifiers fall into two categories: **surcharges** (which increase the price) and **discounts** (which reduce it). Surcharges and discounts are independent — a booking can have both — but only one discount can apply per booking.
+
+<AccordionGroup>
+  <Accordion title="Day-of-week surcharge">
+    Some properties charge more on certain days of the week — commonly Friday and Saturday nights. This modifier is evaluated per night: if a specific night of your stay falls on a qualifying day, a surcharge is added to that night's price only.
+
+    The surcharge can be a fixed amount (e.g., £20 extra per qualifying night) or a percentage of that night's base price (e.g., 15% more on weekends). Nights that don't fall on a qualifying day are unaffected.
+
+    If this modifier applied to your booking, you will see `"day_of_week"` in the `applied_modifiers` array of the response.
+  </Accordion>
+
+  <Accordion title="Length-of-stay discount">
+    If you stay for at least a minimum number of nights, this modifier applies a discount to your entire booking. For example, a property might offer 10% off when you stay 5 nights or more.
+
+    The discount is calculated as a percentage (or flat amount) of the `subtotal` — the full pre-discount total — not just individual nights. This modifier is a **discount**: it reduces `total_price` below `subtotal`.
+
+    <Note>
+      Only one discount can apply per booking. If both a length-of-stay discount and an early-bird discount are eligible, whichever has the lower `sort_order` configured by the property fires first, and the other is skipped.
+    </Note>
+
+    If applied, you will see `"length_of_stay"` in `applied_modifiers`.
+  </Accordion>
+
+  <Accordion title="Early-bird discount">
+    Booking well in advance can unlock a lower rate. This modifier triggers when the number of days between your booking date and your arrival date meets or exceeds the property's threshold (for example, booking at least 30 days before check-in).
+
+    Like the length-of-stay discount, it applies to the `subtotal` as a percentage or flat reduction.
+
+    <Tip>
+      If you're flexible on timing, booking early is one of the most reliable ways to get a lower price. Check the `applied_modifiers` field to confirm an early-bird discount was applied to your result.
+    </Tip>
+
+    <Note>
+      Only one discount applies per booking. If a length-of-stay discount has already fired, the early-bird discount is skipped even if you would otherwise qualify.
+    </Note>
+
+    If applied, you will see `"early_bird"` in `applied_modifiers`.
+  </Accordion>
+
+  <Accordion title="Last-minute surcharge">
+    Booking very close to your arrival date may result in a higher price. This modifier triggers when the number of days until arrival is at or below the property's threshold (for example, within 3 days of check-in).
+
+    The surcharge is added per night across all nights of your stay, as either a flat amount or a percentage of each night's base price.
+
+    <Warning>
+      Last-minute surcharges and discounts are independent: a last-minute surcharge can apply at the same time as a length-of-stay discount. The `applied_modifiers` array will list all that fired.
+    </Warning>
+
+    If applied, you will see `"last_minute"` in `applied_modifiers`.
+  </Accordion>
+
+  <Accordion title="Extra-guest surcharge">
+    Each room has a `base_occupancy` — the number of guests the standard rate is designed for. If the total number of guests (adults plus children) in your search exceeds that figure, this modifier adds a per-guest, per-night surcharge for each additional person.
+
+    For example, if a room has a `base_occupancy` of 2 and you search for 3 guests, you have 1 extra guest. The surcharge is then: `adjustment_value × extra_guests × number_of_nights`.
+
+    If applied, you will see `"extra_guest"` in `applied_modifiers`.
+  </Accordion>
+</AccordionGroup>
+
+## Modifier ordering and the one-discount rule
+
+Modifiers are applied in a fixed order determined by each property's configuration (`sort_order`). Surcharges (day-of-week, last-minute, extra-guest) and the single winning discount are all computed in that order.
+
+The **one-discount rule** means that only `length_of_stay` or `early_bird` can apply — not both. The eligible modifier with the lowest `sort_order` wins. If neither is eligible, no discount applies and `subtotal` and `total_price` will be equal (assuming no other adjustments).
+
+## Reading the API response
+
+The fields most relevant to pricing in each search result are:
+
+| Field               | Description                                                                  |
+| ------------------- | ---------------------------------------------------------------------------- |
+| `subtotal`          | Sum of nightly base prices plus any surcharges, before discounts             |
+| `total_price`       | Final price after all modifiers, including discounts                         |
+| `currency`          | ISO 4217 currency code (e.g., `"GBP"`, `"USD"`, `"EUR"`)                   |
+| `applied_modifiers` | Array of modifier types that fired (e.g., `["day_of_week", "early_bird"]`)  |
+| `is_refundable`     | `true` if the rate allows free cancellation per the policy                  |
+| `cancellation_policy` | Human-readable cancellation terms                                          |
+
+### Example: subtotal vs. total_price
+
+```json
+{
+  "subtotal": 640.00,
+  "total_price": 576.00,
+  "currency": "GBP",
+  "applied_modifiers": ["early_bird"],
+  "is_refundable": true,
+  "cancellation_policy": "Free cancellation up to 48 hours before check-in."
+}
+```
+
+In this example, a 10% early-bird discount reduced a £640 subtotal to a £576 total. The `applied_modifiers` array confirms which modifier produced the saving.
+
+<Tip>
+  When comparing results, always compare `total_price` — not `subtotal` — because different hotels may have different modifier configurations that result in varying gaps between the two figures.
+</Tip>

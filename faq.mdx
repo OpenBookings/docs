@@ -1,0 +1,125 @@
+---
+title: "Frequently Asked Questions — OpenBookings"
+description: "Answers to common questions about searching, booking, pricing, and signing in to OpenBookings, the open-source hotel booking platform."
+---
+
+Whether you're a first-time visitor trying to find a hotel or a developer integrating OpenBookings into your app, these answers cover the most common questions about how the platform works.
+
+## Getting started
+
+<AccordionGroup>
+  <Accordion title="What is OpenBookings?">
+    OpenBookings is an open-source hotel booking platform that lets you search for available rooms near any destination, compare real-time pricing, and complete bookings — all without a password. You enter a destination, choose your dates and guest count, and OpenBookings returns a ranked list of properties with up-to-date availability and pricing.
+
+    The project is fully open-source. You can find the source code on [GitHub](https://github.com/OpenBookings/OB-Web-App).
+  </Accordion>
+
+  <Accordion title="Is OpenBookings free to use?">
+    Yes. Searching for hotels and browsing results is completely free. You only pay for a room when you complete a booking, and the price you see is the price charged by the property — OpenBookings does not add service fees on top of the displayed rate.
+  </Accordion>
+
+  <Accordion title="Do I need to create an account to search?">
+    No. You can search for hotels, view pricing, and browse results without signing in. An account is only required to complete a booking. When you're ready to book, you can create an account in seconds using your email address — no password needed.
+  </Accordion>
+
+  <Accordion title="What countries and cities are available?">
+    OpenBookings searches globally. As long as a destination has properties registered in the platform, it will appear in search results. The destination search uses a city index powered by Algolia, so you can type any city name and see matching suggestions instantly. Coverage depends on which hotels have listed rooms; if your destination returns no results, try a nearby larger city.
+  </Accordion>
+</AccordionGroup>
+
+## Search & booking
+
+<AccordionGroup>
+  <Accordion title="Why am I not seeing results for my destination?">
+    A few things can cause an empty results page:
+
+    - **No properties within range.** OpenBookings searches within a 250 km radius of the destination's coordinates. If no hotels are listed within that area, you'll see no results.
+    - **No available rooms for your dates.** All rooms shown must be available for every night of your stay. If a property is fully booked, it won't appear.
+    - **Guest count too high.** Results are filtered to rooms that can accommodate your selected number of adults and children. Reducing the guest count may reveal more options.
+    - **Dates too far in advance.** Some properties only open availability within a certain window. Try searching closer to your intended travel dates.
+  </Accordion>
+
+  <Accordion title="How does OpenBookings determine which hotels appear?">
+    OpenBookings queries properties within 250 km of your destination's coordinates, then filters to rooms that are available for every night of your stay and can accommodate your guest count. Each property's pricing is calculated in real time based on your specific dates and guest configuration before results are returned.
+  </Accordion>
+
+  <Accordion title="How are search results ordered?">
+    Results are sorted by total price for your stay, lowest first. OpenBookings picks the cheapest qualifying room for each property and ranks properties by that price, so the most affordable options always appear at the top.
+  </Accordion>
+
+  <Accordion title="What does the search radius mean?">
+    When you search for a destination, OpenBookings finds all properties within **250 km** of that city's coordinates. This radius is fixed and cannot be adjusted. If you want results closer to a specific neighbourhood or landmark, choose the nearest city as your destination — the radius is large enough to surface properties across an entire metropolitan region.
+  </Accordion>
+
+  <Accordion title="Can I search for multiple rooms?">
+    Yes. Use the guest selector on the home page to set the number of rooms you need alongside your adult and children count. The search will return rooms priced per room, and the total price shown reflects the number of rooms you selected.
+  </Accordion>
+</AccordionGroup>
+
+## Pricing
+
+<AccordionGroup>
+  <Accordion title="Why does the price change based on my booking date?">
+    Hotel rates on OpenBookings are dynamic. Each room has a base nightly rate, but properties can apply modifiers that adjust the price based on factors like the day of the week, how far in advance you're booking, and how many guests you're bringing. The price you see is always calculated for your exact dates and guest count.
+  </Accordion>
+
+  <Accordion title="What is an early-bird discount?">
+    An early-bird discount is a price reduction applied when you book a set number of days before your arrival date. If a property offers an early-bird modifier and your booking date is far enough in advance, the discount is automatically applied to your total — you don't need a coupon code. The threshold varies by property.
+  </Accordion>
+
+  <Accordion title="What is a last-minute surcharge?">
+    A last-minute surcharge is an additional charge applied when you book within a short window before your arrival date. Properties use this modifier to reflect higher demand close to the stay date. If your check-in is soon and you see a higher-than-expected price, a last-minute surcharge may be contributing to it.
+
+    <Note>
+      A last-minute surcharge and a discount modifier can both apply to the same booking — they are independent. However, only one discount (either an early-bird discount or a length-of-stay discount) can fire per booking, not both.
+    </Note>
+  </Accordion>
+
+  <Accordion title="What does 'refundable' mean?">
+    A **refundable** rate means the booking can be cancelled for a full refund, subject to the property's cancellation policy. A **non-refundable** rate is typically cheaper but carries no cancellation flexibility. Each result in the search list shows whether the rate is refundable so you can compare before booking.
+  </Accordion>
+
+  <Accordion title="Why does adding extra guests increase the price?">
+    Every room has a base occupancy — the number of guests included in the base nightly rate. If your total guest count (adults plus children) exceeds that base occupancy, an extra-guest surcharge is added for each additional person per night. This surcharge can be a flat amount per guest or a percentage of the base rate, depending on the property's configuration.
+  </Accordion>
+</AccordionGroup>
+
+## Authentication
+
+<AccordionGroup>
+  <Accordion title="How do I sign in?">
+    OpenBookings uses **magic-link email authentication** — no passwords required.
+
+    <Steps>
+      <Step title="Enter your email">
+        Click the sign-in button on the home page and type your email address.
+      </Step>
+      <Step title="Check your inbox">
+        OpenBookings sends you an email containing a one-time sign-in link. The link expires after **15 minutes**.
+      </Step>
+      <Step title="Click the link">
+        Click the link in the email. You're signed in automatically and redirected back to OpenBookings.
+      </Step>
+    </Steps>
+  </Accordion>
+
+  <Accordion title="I didn't receive my magic link email — what should I do?">
+    If the email hasn't arrived within a couple of minutes:
+
+    1. Check your **spam or junk folder** — transactional emails occasionally get filtered.
+    2. Make sure you entered the correct email address.
+    3. Request a new magic link by starting the sign-in flow again — the previous link is still valid until it expires, but requesting a new one won't cause problems.
+
+    <Warning>
+      Magic links expire after **15 minutes**. If you click an expired link, return to the sign-in page and request a fresh one.
+    </Warning>
+  </Accordion>
+
+  <Accordion title="Can I use Google or Apple to sign in?">
+    Yes. OpenBookings supports signing in with **Google** and **Apple** in addition to magic-link email. Look for the social sign-in buttons on the authentication form. Social sign-in is the fastest option if you're already logged into one of those accounts in your browser.
+  </Accordion>
+
+  <Accordion title="How do I sign out?">
+    Click your **profile avatar** in the top-right corner of the home page. This signs you out immediately and refreshes the page. Your session is cleared from the browser, and you'll need to sign in again to access your account.
+  </Accordion>
+</AccordionGroup>

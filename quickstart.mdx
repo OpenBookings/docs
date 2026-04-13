@@ -1,0 +1,191 @@
+---
+title: "Get started with OpenBookings: your first hotel search"
+description: "Search for available hotels using the OpenBookings web app or the GET /api/query REST endpoint. Get to your first results in under 5 minutes."
+---
+
+You can start searching for hotels immediately — no account required. This guide walks through the search experience in the web app and shows you how to make the same search directly against the API so you can integrate OpenBookings into your own application.
+
+## Search in the web app
+
+<Steps>
+  <Step title="Open the app">
+    Go to [openbookings.co](https://openbookings.co). You'll see a fullscreen hero image with a search panel in the bottom-right corner.
+  </Step>
+  <Step title="Enter your destination">
+    Click the **Destination...** field. As you type a city name, OpenBookings shows instant typeahead suggestions powered by Algolia. Click the destination you want — the app records its coordinates for the search.
+  </Step>
+  <Step title="Choose your dates">
+    Click the date field (it shows **From / Till**) to open the date picker. Click a check-in date, then a check-out date. The field updates to show your selected range, e.g. `Jun 1, 2026 / Jun 3, 2026`.
+  </Step>
+  <Step title="Set guests and rooms">
+    Click the guest field to open the guest selector. Adjust the number of adults, children, and rooms. The default is **2 Adults · 1 Room**. OpenBookings only returns rooms whose `max_adults` and `max_children` capacity covers your guest count.
+  </Step>
+  <Step title="Run the search">
+    Click **Find my trip**. OpenBookings fetches results from `GET /api/query` and displays a ranked list of available properties sorted by total price, lowest first.
+  </Step>
+</Steps>
+
+<Tip>
+  Each result shows the best-priced available room for that property. If a property has multiple room types that fit your guest count, only the cheapest qualifying room appears in the list.
+</Tip>
+
+## Search via the API
+
+If you're building an integration, you can call `GET /api/query` directly. The endpoint accepts your destination coordinates, dates, and guest count and returns the same ranked results the app displays.
+
+### Required parameters
+
+| Parameter  | Type    | Description                                      |
+| ---------- | ------- | ------------------------------------------------ |
+| `lat`      | number  | Latitude of the destination                      |
+| `lon`      | number  | Longitude of the destination                     |
+| `checkin`  | string  | Check-in date in `YYYY-MM-DD` format             |
+| `checkout` | string  | Check-out date in `YYYY-MM-DD` format            |
+| `adults`   | integer | Number of adult guests                           |
+| `rooms`    | integer | Number of rooms                                  |
+
+### Optional parameters
+
+| Parameter  | Type    | Description                                      |
+| ---------- | ------- | ------------------------------------------------ |
+| `children` | integer | Number of child guests (default `0`)             |
+
+### Example: search London for 2 nights
+
+The coordinates below are central London (`lat=51.5074`, `lon=-0.1278`). The search covers all properties within 250 km of that point.
+
+<CodeGroup>
+
+```bash cURL
+curl "https://openbookings.co/api/query?lat=51.5074&lon=-0.1278&checkin=2026-06-01&checkout=2026-06-03&adults=2&rooms=1"
+```
+
+```javascript JavaScript
+const params = new URLSearchParams({
+  lat: "51.5074",
+  lon: "-0.1278",
+  checkin: "2026-06-01",
+  checkout: "2026-06-03",
+  adults: "2",
+  rooms: "1",
+});
+
+const res = await fetch(`https://openbookings.co/api/query?${params}`);
+const hotels = await res.json();
+console.log(hotels);
+```
+
+```python Python
+import urllib.request, json
+
+params = (
+  "lat=51.5074&lon=-0.1278"
+  "&checkin=2026-06-01&checkout=2026-06-03"
+  "&adults=2&rooms=1"
+)
+url = f"https://openbookings.co/api/query?{params}"
+
+with urllib.request.urlopen(url) as response:
+    hotels = json.load(response)
+    print(hotels)
+```
+
+</CodeGroup>
+
+### Example response
+
+The API returns an array of hotel objects, one per property, sorted by `total_price` ascending. Each object represents the cheapest available room for that property on your dates.
+
+```json
+[
+  {
+    "hotel_id": "prop_01j2kx9n4t",
+    "hotel_name": "The Kensington Grand",
+    "hotel_slug": "the-kensington-grand",
+    "city": "London",
+    "country": "GB",
+    "room_id": "room_01j2kx9q8w",
+    "room_name": "Classic Double",
+    "room_description": "A comfortable double room with city views and en-suite bathroom.",
+    "base_occupancy": 2,
+    "max_adults": 2,
+    "max_children": 1,
+    "rate_plan_id": "rp_01j2kxbm3z",
+    "rate_plan_name": "Flexible Rate",
+    "currency": "GBP",
+    "is_refundable": true,
+    "cancellation_policy": "Free cancellation until 48 hours before check-in.",
+    "min_stay": 1,
+    "max_stay": null,
+    "subtotal": 280.00,
+    "total_price": 252.00,
+    "applied_modifiers": ["length_of_stay"]
+  },
+  {
+    "hotel_id": "prop_01j2kyp7rn",
+    "hotel_name": "Shoreditch Loft Hotel",
+    "hotel_slug": "shoreditch-loft-hotel",
+    "city": "London",
+    "country": "GB",
+    "room_id": "room_01j2kyp9vx",
+    "room_name": "Loft King",
+    "room_description": "Open-plan loft room with exposed brick and a king-size bed.",
+    "base_occupancy": 2,
+    "max_adults": 2,
+    "max_children": 0,
+    "rate_plan_id": "rp_01j2kyqc4f",
+    "rate_plan_name": "Non-Refundable Rate",
+    "currency": "GBP",
+    "is_refundable": false,
+    "cancellation_policy": "Non-refundable. No changes permitted after booking.",
+    "min_stay": 1,
+    "max_stay": null,
+    "subtotal": 310.00,
+    "total_price": 310.00,
+    "applied_modifiers": []
+  }
+]
+```
+
+### Key response fields
+
+| Field                | Type      | Description                                                                         |
+| -------------------- | --------- | ----------------------------------------------------------------------------------- |
+| `hotel_id`           | string    | Unique property identifier                                                          |
+| `hotel_name`         | string    | Display name of the property                                                        |
+| `hotel_slug`         | string    | URL-safe property identifier                                                        |
+| `city` / `country`   | string    | Location of the property                                                            |
+| `room_name`          | string    | Name of the room type being quoted                                                  |
+| `currency`           | string    | ISO 4217 currency code (e.g. `"GBP"`, `"EUR"`, `"USD"`)                            |
+| `is_refundable`      | boolean   | Whether the rate allows free cancellation                                           |
+| `cancellation_policy`| string    | Human-readable cancellation terms                                                   |
+| `subtotal`           | number    | Base cost before discounts                                                          |
+| `total_price`        | number    | Final price after all applicable modifiers (the amount the guest pays)              |
+| `applied_modifiers`  | string[]  | Rate modifiers that were applied (e.g. `"length_of_stay"`, `"early_bird"`)         |
+
+<Note>
+  `total_price` may be lower than `subtotal` when a discount modifier fires (such as a length-of-stay discount), or higher when surcharges apply (such as extra-guest fees or weekend pricing).
+</Note>
+
+### Error responses
+
+If a required parameter is missing or invalid, the API returns HTTP `400` with an `errors` array:
+
+```json
+{
+  "errors": ["lat is required", "checkin is required"]
+}
+```
+
+## Next steps
+
+Now that you have search results, you can sign in to complete a booking.
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="key" href="/authentication">
+    Sign in with magic-link email or Google / Apple — no password needed.
+  </Card>
+  <Card title="Hotel Search API reference" icon="terminal" href="/api/hotel-search">
+    Full parameter reference, response schema, and error codes.
+  </Card>
+</CardGroup>

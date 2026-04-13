@@ -1,0 +1,201 @@
+---
+title: 'Complete Booking Flow: Search to Confirmation'
+description: 'Walk through every step of booking a hotel on OpenBookings — from entering your destination to confirming your reservation, with full API details.'
+---
+
+OpenBookings takes you from a blank search box to a confirmed reservation in a handful of steps. This guide walks through each stage of the flow, explains what information you'll see at every point, and shows you how to replicate the same search programmatically using the public API.
+
+## The booking flow at a glance
+
+<Steps>
+  <Step title="Open the app and enter a destination">
+    When you land on OpenBookings, you'll see a search panel in the bottom-right corner. Click the **Destination** field and start typing a city name. A typeahead list of matching cities appears — select the one you want. The app records the destination's geographic coordinates (latitude and longitude) internally; these are what drive the hotel search radius.
+  </Step>
+
+  <Step title="Select your check-in and check-out dates">
+    Click the date field (labelled **From / Till**) to open the calendar picker. Tap your check-in date first, then your check-out date. Both dates are stored in `YYYY-MM-DD` format. The number of nights is derived automatically from the difference between the two dates.
+
+    <Note>
+      Dates are interpreted in your local timezone. The calendar always shows the date as you selected it — no UTC conversion surprises.
+    </Note>
+  </Step>
+
+  <Step title="Set your guest count and number of rooms">
+    Click the guests field to open the **Guest Selector**. Use the `+` and `−` buttons to set:
+
+    | Field | Definition | Minimum |
+    |---|---|---|
+    | Adults | Guests aged 13 or above | 0 |
+    | Children | Guests aged 0–12 | 0 |
+    | Rooms | Number of separate rooms needed | 1 |
+
+    The selector defaults to **2 adults, 0 children, 1 room** on first load. Only rooms whose `max_adults` ≥ your adult count **and** `max_children` ≥ your child count are returned in results — the API filters unsuitable rooms before they ever reach you.
+  </Step>
+
+  <Step title="Run the search">
+    Click **Find my trip**. The app sends your destination coordinates, dates, and guest counts to `GET /api/query` and displays the matching hotels.
+  </Step>
+
+  <Step title="Review search results">
+    Each result card shows the best-priced available room for that hotel. Here's what every field on a result means:
+
+    | Field | What it tells you |
+    |---|---|
+    | `hotel_name` / `property_name` | The name of the hotel |
+    | `city` | The city the hotel is in |
+    | `room_name` | The specific room type being quoted |
+    | `room_description` | A short description of the room |
+    | `price_per_night` | The starting nightly rate (base price before modifiers) displayed on the card |
+    | `total_price` | The full stay cost after all applicable pricing modifiers |
+    | `currency` | ISO 4217 currency code (e.g. `EUR`, `USD`) |
+    | `is_refundable` | Whether the rate allows cancellation for a refund |
+    | `cancellation_policy` | Human-readable cancellation terms |
+    | `rate_plan_name` | The name of the rate plan that produced this price |
+
+    Results are sorted by `total_price` ascending, and only the cheapest available room per hotel is shown. If a hotel has multiple room types, you'll see whichever one costs least for your dates and guest count.
+
+    <Tip>
+      The price shown on the card already includes all active modifiers — weekend surcharges, last-minute fees, length-of-stay discounts, and extra-guest charges. What you see is what you pay.
+    </Tip>
+  </Step>
+
+  <Step title="Choose a room and proceed to book">
+    Click **Explore** on the hotel card you want. You'll see the full room details and a booking button.
+  </Step>
+
+  <Step title="Sign in to complete the booking">
+    OpenBookings uses email magic-link authentication — no password required. If you're not already signed in, enter your email address and click the link sent to your inbox. You'll be redirected back to complete the booking.
+
+    <Note>
+      Your search state is preserved through the sign-in redirect so you don't have to start over.
+    </Note>
+  </Step>
+
+  <Step title="Confirm your booking">
+    Review the booking summary (hotel, room, dates, total price, cancellation policy) and confirm. You'll receive a confirmation email once the reservation is placed.
+  </Step>
+</Steps>
+
+## Calling the API directly
+
+You can reproduce any search programmatically with a single `GET` request to `/api/query`. All parameters are passed as URL query strings.
+
+### Required parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `lat` | `number` | Latitude of the destination |
+| `lon` | `number` | Longitude of the destination |
+| `checkin` | `string` | Arrival date in `YYYY-MM-DD` format |
+| `checkout` | `string` | Departure date in `YYYY-MM-DD` format |
+| `adults` | `number` | Number of adult guests (age 13+) |
+| `rooms` | `number` | Number of rooms required |
+
+### Optional parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `children` | `number` | Number of child guests (age 0–12); defaults to `0` if omitted |
+
+<CodeGroup>
+
+```bash cURL
+curl "https://openbookings.co/api/query?lat=48.8566&lon=2.3522&checkin=2026-08-01&checkout=2026-08-05&adults=2&children=1&rooms=1"
+```
+
+```javascript fetch
+const params = new URLSearchParams({
+  lat: '48.8566',
+  lon: '2.3522',
+  checkin: '2026-08-01',
+  checkout: '2026-08-05',
+  adults: '2',
+  children: '1',
+  rooms: '1',
+});
+
+const response = await fetch(`/api/query?${params}`);
+const results = await response.json();
+```
+
+```python requests
+import requests
+
+params = {
+    'lat': 48.8566,
+    'lon': 2.3522,
+    'checkin': '2026-08-01',
+    'checkout': '2026-08-05',
+    'adults': 2,
+    'children': 1,
+    'rooms': 1,
+}
+
+response = requests.get('https://openbookings.co/api/query', params=params)
+results = response.json()
+```
+
+</CodeGroup>
+
+### Example response
+
+The endpoint returns a JSON array. Each element represents the best-priced room for one hotel. Fields are sorted by `total_price` ascending.
+
+```json
+[
+  {
+    "hotel_id": "a1b2c3d4-...",
+    "hotel_name": "Hôtel du Marais",
+    "hotel_slug": "hotel-du-marais",
+    "city": "Paris",
+    "country": "France",
+    "room_id": "r-0001",
+    "room_name": "Classic Double",
+    "room_description": "A comfortable double room with city views.",
+    "base_occupancy": 2,
+    "max_adults": 2,
+    "max_children": 1,
+    "rate_plan_id": "rp-standard",
+    "rate_plan_name": "Standard Rate",
+    "currency": "EUR",
+    "is_refundable": true,
+    "cancellation_policy": "Free cancellation until 48 hours before arrival.",
+    "min_stay": 1,
+    "max_stay": null,
+    "subtotal": 520.00,
+    "total_price": 468.00,
+    "applied_modifiers": ["length_of_stay"]
+  }
+]
+```
+
+`subtotal` is the sum of all nightly base prices (plus any per-night surcharges). `total_price` is the final amount after booking-level discounts. `applied_modifiers` lists which modifier types changed the price — see the [pricing modifiers guide](/guides/pricing-modifiers) for details.
+
+### Error responses
+
+If a required parameter is missing or invalid, the API returns HTTP `400` with an `errors` array:
+
+```json
+{
+  "errors": [
+    "lat is required",
+    "checkin is required"
+  ]
+}
+```
+
+A `500` response indicates a server-side error and will include a single `error` string.
+
+## When no results are returned
+
+The API returns an empty array (`[]`) when no rooms match your search. This can happen for several reasons:
+
+- **No hotels within 250 km** of the destination coordinates have available inventory for your dates.
+- **No room fits your guest count** — every room within range has a `max_adults` or `max_children` lower than what you requested.
+- **Stay length constraints** — the room's `min_stay` is longer than your selected stay, or your stay exceeds `max_stay`.
+
+<Warning>
+  An empty result set is a valid `200 OK` response — your code should always check the array length before rendering results.
+</Warning>
+
+If you're integrating the API and want to show a helpful empty state, check `results.length === 0` and prompt the user to adjust their dates, guest count, or destination.

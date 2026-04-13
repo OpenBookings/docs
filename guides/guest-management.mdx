@@ -1,0 +1,161 @@
+---
+title: 'Guest Management: Rooms, Adults, and Children'
+description: 'Learn how to configure the guest selector, understand room capacity constraints, and see how guest counts affect both availability and the price you pay.'
+---
+
+Getting your guest count right before you search is important — OpenBookings uses it both to filter out rooms that don't fit your party and to calculate any extra-guest surcharges that apply when you're above a room's base occupancy. This guide explains how the guest selector works, what the constraints are, and how guest numbers feed into pricing.
+
+## Using the guest selector
+
+Click the guests field on the search panel to open the **Guest Selector**. It exposes three independent counters:
+
+| Counter | Who it covers | Minimum |
+|---|---|---|
+| **Adults** | Guests aged 13 or above | 0 |
+| **Children** | Guests aged 0–12 | 0 |
+| **Rooms** | Number of separate rooms you need | 1 |
+
+Use the `+` and `−` buttons to adjust each value. The selector starts at **2 adults, 0 children, 1 room** by default.
+
+<Note>
+  Adults and children are counted separately because rooms have distinct `max_adults` and `max_children` limits. A room that sleeps 4 adults may only accept 1 child — or none at all. The API enforces both limits independently.
+</Note>
+
+## How guest count affects room availability
+
+When you run a search, the API only returns rooms where **both** of the following are true:
+
+- `max_adults` ≥ your `adults` count
+- `max_children` ≥ your `children` count
+
+Rooms that fail either condition are excluded entirely — they won't appear in results, even at a higher price.
+
+<Steps>
+  <Step title="Set your correct guest count before searching">
+    Enter the exact number of adults and children in your party. If you under-count to see more options, the rooms shown may not legally or physically accommodate your full group.
+  </Step>
+
+  <Step title="Adjust the room count if your group needs multiple rooms">
+    If you need 2 rooms for a family, set **Rooms** to `2`. The API filters rooms so that at least `rooms` units of the qualifying type are available at that property.
+
+    <Warning>
+      The room count you set must not exceed the number of qualifying rooms actually available at a hotel. If you request 3 rooms but only 2 fit your guest configuration, that property won't appear in results.
+    </Warning>
+  </Step>
+
+  <Step title="Run the search and review availability">
+    The results show one room card per hotel — the cheapest room that fits your guest count. If a hotel offers multiple room types, you'll only see the most affordable qualifying option.
+  </Step>
+</Steps>
+
+## How guest count affects pricing
+
+Beyond filtering, your guest count directly influences the price you pay through the **extra-guest surcharge** modifier.
+
+### Base occupancy and extra guests
+
+Every room has a `base_occupancy` — the number of guests the base nightly rate is designed for. When the total number of guests (adults + children) exceeds `base_occupancy`, an extra-guest surcharge applies for each additional person.
+
+```
+extraGuests = max(0, (adults + children) − base_occupancy)
+```
+
+For example, if a room has `base_occupancy: 1` and you search for `adults: 2, children: 0`:
+
+```
+extraGuests = max(0, (2 + 0) − 1) = 1
+```
+
+One extra guest triggers the surcharge.
+
+### Surcharge calculation
+
+The surcharge can be configured as a flat amount or a percentage of the base nightly rate:
+
+| Adjustment type | How it's applied |
+|---|---|
+| `flat` | A fixed currency amount per extra guest, per night |
+| `percent` | A percentage of `base_price` per extra guest, per night |
+
+The surcharge is applied night by night, across every night of the stay.
+
+### Concrete examples
+
+<AccordionGroup>
+  <Accordion title="Example 1: No extra-guest surcharge">
+    **Room:** `base_occupancy: 2`, base price €100/night
+
+    **Search:** 2 adults, 0 children, 2-night stay
+
+    ```
+    extraGuests = max(0, (2 + 0) − 2) = 0
+    ```
+
+    No extra-guest modifier fires. Total = €200.
+  </Accordion>
+
+  <Accordion title="Example 2: Flat surcharge — 1 extra guest">
+    **Room:** `base_occupancy: 1`, base price €100/night
+
+    **Modifier:** `type: extra_guest`, `adjustment_type: flat`, `adjustment_value: 25`
+
+    **Search:** 2 adults, 0 children, 2-night stay
+
+    ```
+    extraGuests = max(0, (2 + 0) − 1) = 1
+
+    surcharge per night = 25 × 1 = €25
+    total surcharge = €25 × 2 nights = €50
+
+    subtotal = €200 (base) + €50 (surcharge) = €250
+    ```
+  </Accordion>
+
+  <Accordion title="Example 3: Percent surcharge — 2 extra guests">
+    **Room:** `base_occupancy: 1`, base price €100/night
+
+    **Modifier:** `type: extra_guest`, `adjustment_type: percent`, `adjustment_value: 15`
+
+    **Search:** 3 adults, 0 children, 3-night stay
+
+    ```
+    extraGuests = max(0, (3 + 0) − 1) = 2
+
+    surcharge per night = (100 × 15 × 2) / 100 = €30
+    total surcharge = €30 × 3 nights = €90
+
+    subtotal = €300 (base) + €90 (surcharge) = €390
+    ```
+  </Accordion>
+
+  <Accordion title="Example 4: Children count toward extra guests">
+    **Room:** `base_occupancy: 2`, base price €80/night
+
+    **Modifier:** `type: extra_guest`, `adjustment_type: flat`, `adjustment_value: 20`
+
+    **Search:** 2 adults, 1 child, 1-night stay
+
+    ```
+    extraGuests = max(0, (2 + 1) − 2) = 1
+
+    surcharge = 20 × 1 = €20
+    total = €80 + €20 = €100
+    ```
+
+    Children count toward the total guest number when calculating extra-guest surcharges.
+  </Accordion>
+</AccordionGroup>
+
+<Tip>
+  The `total_price` in every search result already includes any extra-guest surcharge for your party size. You'll also see `"extra_guest"` listed in the `applied_modifiers` array on that result whenever the surcharge fired.
+</Tip>
+
+## Quick reference: guest constraints
+
+| Constraint | Where it applies | Effect when exceeded |
+|---|---|---|
+| `max_adults` | Room level | Room excluded from results |
+| `max_children` | Room level | Room excluded from results |
+| `base_occupancy` | Rate plan level | Extra-guest surcharge added to price |
+
+If you're building on top of the API, keep in mind that `max_adults` and `max_children` control **eligibility**, while `base_occupancy` only controls **pricing**. A room can appear in results even when guests exceed `base_occupancy` — it will just cost more.

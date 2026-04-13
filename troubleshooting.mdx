@@ -1,0 +1,183 @@
+---
+title: "Troubleshooting Guide — OpenBookings Help"
+description: "Step-by-step solutions for common OpenBookings issues: failed API requests, empty search results, missing magic link emails, and rate limiting."
+---
+
+This page covers the most common problems you might encounter when using OpenBookings as an end-user or when calling the API as a developer. Work through the relevant section below to diagnose and resolve your issue.
+
+## API issues
+
+<AccordionGroup>
+  <Accordion title="400 Bad Request: 'lat is required' or other missing parameters">
+    The search endpoint requires all of the following query parameters. If any are absent or empty, the API returns a `400` response with an `errors` array listing every missing field.
+
+    | Parameter  | Type   | Format         | Required |
+    |------------|--------|----------------|----------|
+    | `lat`      | number | Decimal degrees (e.g. `48.8566`) | Yes |
+    | `lon`      | number | Decimal degrees (e.g. `2.3522`)  | Yes |
+    | `checkin`  | string | `YYYY-MM-DD`   | Yes |
+    | `checkout` | string | `YYYY-MM-DD`   | Yes |
+    | `adults`   | number | Integer ≥ 1    | Yes |
+    | `rooms`    | number | Integer ≥ 1    | Yes |
+    | `children` | number | Integer ≥ 0    | No  |
+
+    A complete request looks like this:
+
+    ```http
+    GET /api/query?lat=48.8566&lon=2.3522&checkin=2026-08-01&checkout=2026-08-05&adults=2&rooms=1
+    ```
+
+    <Steps>
+      <Step title="Check the error response">
+        Read the `errors` array in the response body. It lists every missing or invalid field by name, so you can fix all issues in one pass.
+
+        ```json
+        { "errors": ["lat is required", "checkin is required"] }
+        ```
+      </Step>
+      <Step title="Add the missing parameters">
+        Include every required parameter in your query string before retrying.
+      </Step>
+      <Step title="Verify the request is a GET">
+        The endpoint only accepts `GET` requests. Body parameters are not read — all values must be in the URL query string.
+      </Step>
+    </Steps>
+  </Accordion>
+
+  <Accordion title="400 Bad Request: 'lat must be a number' or similar type errors">
+    Each numeric parameter (`lat`, `lon`, `adults`, `rooms`, `children`) must parse as a valid JavaScript number. If a value is present but not numeric, the API returns a `400` with a message like `lat must be a number`.
+
+    Common causes:
+
+    - Passing a city name instead of coordinates (e.g. `lat=Paris` instead of `lat=48.8566`).
+    - Including extra characters such as degree symbols (`48°`) or whitespace.
+    - Passing an empty string for an optional parameter — omit `children` entirely rather than sending `children=`.
+
+    <Steps>
+      <Step title="Confirm lat and lon are decimal numbers">
+        Use a geocoding service or your destination search to obtain the numeric latitude and longitude before calling the search endpoint.
+      </Step>
+      <Step title="Remove any non-numeric characters">
+        Values must be plain numbers: `48.8566`, not `"48.8566 N"` or `48,8566`.
+      </Step>
+      <Step title="Omit optional parameters when not needed">
+        If you don't have a value for `children`, leave the parameter out of the query string entirely rather than passing an empty string.
+      </Step>
+    </Steps>
+  </Accordion>
+
+  <Accordion title="500 Internal Server Error">
+    A `500` response indicates that the API was unable to complete the database query. The response body contains an `error` field with a message.
+
+    ```json
+    { "error": "Database error" }
+    ```
+
+    <Steps>
+      <Step title="Wait and retry">
+        Transient connectivity issues resolve on their own. Wait a few seconds and send the same request again.
+      </Step>
+      <Step title="Check your parameters">
+        Malformed date strings (e.g. `checkin=not-a-date`) can cause unexpected database errors even after passing client-side validation. Ensure `checkin` and `checkout` are valid `YYYY-MM-DD` dates and that `checkout` is later than `checkin`.
+      </Step>
+      <Step title="Try a different search">
+        If the error persists only for specific coordinates or dates, try a slightly different input to rule out an edge case in the data.
+      </Step>
+      <Step title="Report the issue">
+        If you consistently receive `500` errors, open an issue on the [OpenBookings GitHub repository](https://github.com/OpenBookings/OB-Web-App) and include your request parameters (without personal data) and the error message from the response body.
+      </Step>
+    </Steps>
+  </Accordion>
+</AccordionGroup>
+
+## Rate limiting
+
+<AccordionGroup>
+  <Accordion title="My requests are being blocked or rejected">
+    OpenBookings enforces rate limits to ensure fair access for all users. When you exceed the allowed number of requests in a given time window, the API rejects further requests until the window resets.
+
+    <Tip>
+      **Best practices for developers:**
+
+      - **Cache results on your side.** If you're building a frontend, store search results locally and avoid re-fetching the same query within a short period.
+      - **Debounce user input.** Don't send a new API request on every keystroke. Wait until the user stops typing before triggering a search.
+      - **Respect the reset time.** When a rate-limited response is returned, wait until the window resets before retrying rather than polling repeatedly.
+      - **Avoid parallel duplicate requests.** If multiple parts of your application might trigger the same search, deduplicate requests before they are sent.
+    </Tip>
+
+    If your use case requires higher request volumes, consider running your own instance of OpenBookings so you can configure limits appropriate for your workload.
+  </Accordion>
+</AccordionGroup>
+
+## Search issues
+
+<AccordionGroup>
+  <Accordion title="No results returned for my destination">
+    If your search completes successfully but returns an empty list, work through the following checks:
+
+    <Steps>
+      <Step title="Check the destination coordinates">
+        Results are filtered to properties within 250 km of the coordinates you searched. If the city resolved to unexpected coordinates, try searching for a different nearby city.
+      </Step>
+      <Step title="Reduce the guest count">
+        Every room must accommodate your selected number of adults and children. If your guest count is high, try reducing it to see whether more rooms appear.
+      </Step>
+      <Step title="Adjust your dates">
+        A room must be available for every night of your stay. If most rooms in the area are fully booked, try different dates. Searching too far into the future may also return fewer results if properties haven't opened availability that far out yet.
+      </Step>
+      <Step title="Try a nearby larger city">
+        If your destination is remote or rural, there may be no registered properties within range. Searching for the nearest major city will cast a wider net across the surrounding region.
+      </Step>
+    </Steps>
+  </Accordion>
+
+  <Accordion title="The background image on the home page is not loading">
+    The home page displays a destination background image that is cached in your browser's Cache API for fast repeat loads.
+
+    <Steps>
+      <Step title="Wait a moment">
+        On your first visit, the image downloads in the background. It appears once the download is complete — a plain dark background is shown in the meantime.
+      </Step>
+      <Step title="Check your browser's private browsing mode">
+        Some browsers restrict the Cache API in private or incognito windows. In this mode, the image is loaded directly from the source URL each time, which may be slower or fail if the network request is blocked. Switching to a regular browser window resolves this.
+      </Step>
+      <Step title="Clear the site cache">
+        If the image appears broken (not just slow), your cached version may be stale. Clear the site data for OpenBookings in your browser settings and reload the page to fetch a fresh copy.
+      </Step>
+    </Steps>
+  </Accordion>
+</AccordionGroup>
+
+## Authentication issues
+
+<AccordionGroup>
+  <Accordion title="My magic link email is not arriving">
+    <Steps>
+      <Step title="Check your spam folder">
+        Email providers sometimes route transactional messages to spam or junk. Search for an email from OpenBookings in all folders.
+      </Step>
+      <Step title="Confirm the email address">
+        Make sure you entered the correct address on the sign-in form. There is no error if you type a valid-looking but wrong email — the link is simply sent to the wrong inbox.
+      </Step>
+      <Step title="Request a new link">
+        Return to the sign-in page and submit your email address again. A new link is sent immediately.
+      </Step>
+      <Step title="Use a different sign-in method">
+        If email delivery continues to fail, sign in with **Google** or **Apple** instead. Both options are available on the sign-in form and don't depend on email delivery.
+      </Step>
+    </Steps>
+
+    <Warning>
+      Magic links expire after **15 minutes**. If you find an older link in your inbox, request a fresh one — clicking an expired link will not sign you in.
+    </Warning>
+  </Accordion>
+
+  <Accordion title="I clicked the magic link but it didn't sign me in">
+    A few things can prevent a magic link from working:
+
+    - **The link expired.** Magic links are valid for 15 minutes from when they were sent. Request a new one from the sign-in page.
+    - **The link was already used.** Each link is single-use. If you clicked it before, it's no longer valid. Request a new one.
+    - **The link was modified.** Some email clients or security scanners rewrite URLs, which breaks the token. If you suspect this, copy the full URL from the email and paste it directly into your browser's address bar instead of clicking.
+    - **You're in a different browser.** Try opening the link in the same browser you used to start the sign-in flow, or copy the URL and paste it into your preferred browser.
+  </Accordion>
+</AccordionGroup>

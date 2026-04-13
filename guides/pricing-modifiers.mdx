@@ -1,0 +1,300 @@
+---
+title: 'Pricing Modifiers: How Your Final Price Is Calculated'
+description: 'How OpenBookings pricing modifiers work: day-of-week surcharges, length-of-stay discounts, early-bird deals, last-minute fees, and extra-guest surcharges.'
+---
+
+The price you see on a hotel result in OpenBookings is rarely just the raw nightly rate multiplied by the number of nights. Rate plans can carry up to five types of **pricing modifiers** that adjust the total up or down depending on your booking timing, stay length, party size, and the specific days you're staying. This guide explains every modifier type and how they interact with each other.
+
+## How modifiers are applied
+
+When you run a search, the pricing engine processes each modifier in ascending `sort_order`. Modifiers that add surcharges (day-of-week, last-minute, extra-guest) are always applied. Discount modifiers (length-of-stay and early-bird) follow one rule:
+
+> **Only one discount fires per booking** — whichever eligible discount has the lowest `sort_order` wins. Any other eligible discount is skipped entirely.
+
+This means if a rate plan offers both an early-bird discount and a length-of-stay discount, and you qualify for both, you'll receive exactly one — the one configured with the lower sort order number.
+
+Adjustment amounts come in two forms:
+
+| Adjustment type | Meaning |
+|---|---|
+| `flat` | A fixed amount in the room's currency |
+| `percent` | A percentage of the applicable base price |
+
+For booking-level discounts (`length_of_stay`, `early_bird`), `percent` is calculated against the running `subtotal` (base prices plus any per-night surcharges already applied). For per-night modifiers (`day_of_week`, `last_minute`, `extra_guest`), `percent` is calculated against each night's individual `base_price`.
+
+The `total_price` in every search result reflects all applied modifiers. The `applied_modifiers` array tells you exactly which modifier types fired.
+
+---
+
+## Modifier types
+
+<Tabs>
+  <Tab title="Day of week">
+    ### Day-of-week surcharge
+
+    This modifier adds a surcharge to specific days of the week — typically used to charge more for weekend nights. It fires **per night** independently, so only the nights that fall on a matching day of the week are affected.
+
+    **Trigger condition:** `days_of_week` — an array of integers where `0` = Sunday and `6` = Saturday.
+
+    | Day number | Day |
+    |---|---|
+    | 0 | Sunday |
+    | 1 | Monday |
+    | 2 | Tuesday |
+    | 3 | Wednesday |
+    | 4 | Thursday |
+    | 5 | Friday |
+    | 6 | Saturday |
+
+    **Example scenario:**
+
+    A room has a base price of €100/night. The rate plan includes a day-of-week modifier for days `[5, 6]` (Friday and Saturday) with `adjustment_type: flat` and `adjustment_value: 30`.
+
+    You book Monday 3 August to Sunday 9 August (6 nights):
+
+    | Night | Day | Base price | Surcharge | Night total |
+    |---|---|---|---|---|
+    | Mon 3 Aug | 1 | €100 | — | €100 |
+    | Tue 4 Aug | 2 | €100 | — | €100 |
+    | Wed 5 Aug | 3 | €100 | — | €100 |
+    | Thu 6 Aug | 4 | €100 | — | €100 |
+    | Fri 7 Aug | 5 | €100 | +€30 | €130 |
+    | Sat 8 Aug | 6 | €100 | +€30 | €130 |
+
+    **Subtotal: €660**
+
+    <Note>
+      Day-of-week modifiers are evaluated against the calendar date of each individual night, not the booking date.
+    </Note>
+  </Tab>
+
+  <Tab title="Length of stay">
+    ### Length-of-stay discount
+
+    This modifier gives you a discount when your stay is at least a minimum number of nights. It fires once at the booking level — not per night — and is applied as a reduction against the `subtotal`.
+
+    **Trigger condition:** `min_nights` — the minimum stay length required to unlock the discount.
+
+    **This is a discount modifier.** It competes with the early-bird modifier: only one discount fires per booking, determined by `sort_order`.
+
+    **Adjustment basis:** For `percent` adjustments, the percentage is taken from the `subtotal` (sum of nightly base prices plus any per-night surcharges already applied). When a length-of-stay discount applies, `total_price` will be lower than `subtotal`.
+
+    **Example scenario:**
+
+    A room has a base price of €150/night. The rate plan includes a length-of-stay modifier with `min_nights: 5`, `adjustment_type: percent`, `adjustment_value: -10` (a 10% discount).
+
+    You book a 7-night stay:
+
+    ```
+    subtotal = 7 × €150 = €1,050
+
+    discount = (1,050 × −10) / 100 = −€105
+
+    total_price = €1,050 − €105 = €945
+    ```
+
+    If you booked only 4 nights, `min_nights: 5` would not be met, the modifier would not fire, and you'd pay the full €600.
+
+    <Tip>
+      When you see `"length_of_stay"` in a result's `applied_modifiers` array, the long-stay discount fired and your `total_price` is already lower than `subtotal`.
+    </Tip>
+  </Tab>
+
+  <Tab title="Early bird">
+    ### Early-bird discount
+
+    This modifier rewards you for booking well in advance. It fires once at the booking level when the number of days between today and your arrival date meets or exceeds the configured threshold.
+
+    **Trigger condition:** `days_before_arrival` — the minimum number of days in advance you must book.
+
+    ```
+    daysUntilArrival = (arrivalDate − today) / 86,400,000 ms
+    ```
+
+    The modifier fires when `daysUntilArrival ≥ days_before_arrival`.
+
+    **This is a discount modifier.** It competes with the length-of-stay modifier: only one discount fires per booking, determined by `sort_order`.
+
+    **Adjustment basis:** For `percent` adjustments, the percentage is taken from the `subtotal`.
+
+    **Example scenario:**
+
+    A room has a base price of €200/night. The rate plan includes an early-bird modifier with `days_before_arrival: 30`, `adjustment_type: flat`, `adjustment_value: -50`.
+
+    Today is 1 July and your arrival is 15 August (45 days away):
+
+    ```
+    daysUntilArrival = 45 ≥ 30 → modifier fires
+
+    subtotal (3 nights) = 3 × €200 = €600
+    discount = −€50
+
+    total_price = €600 − €50 = €550
+    ```
+
+    If you tried to book the same room on 20 July for a 15 August arrival (25 days away), `25 < 30` means the modifier would not fire and you'd pay €600.
+
+    <Note>
+      Early-bird eligibility is evaluated at search time using today's date. The price shown in results reflects whether you currently qualify — it won't change retroactively if you wait to confirm.
+    </Note>
+  </Tab>
+
+  <Tab title="Last minute">
+    ### Last-minute surcharge
+
+    This modifier adds a surcharge when you book close to your arrival date. Unlike the early-bird discount, this one increases your price — it fires when `daysUntilArrival` is at or below the configured threshold.
+
+    **Trigger condition:** `days_till_arrival` — the maximum number of days before arrival that triggers the surcharge.
+
+    ```
+    daysUntilArrival = (arrivalDate − today) / 86,400,000 ms
+    ```
+
+    The modifier fires when `daysUntilArrival ≤ days_till_arrival`.
+
+    **This is a surcharge modifier** — it is not subject to the one-discount-per-booking rule and applies on top of any other modifiers.
+
+    **Adjustment basis:** The surcharge is applied to each night individually. For `percent` adjustments, the percentage is taken from each night's `base_price`.
+
+    **Example scenario:**
+
+    A room has a base price of €120/night. The rate plan includes a last-minute modifier with `days_till_arrival: 3`, `adjustment_type: percent`, `adjustment_value: 20`.
+
+    Today is 12 August and your arrival is 14 August (2 days away):
+
+    ```
+    daysUntilArrival = 2 ≤ 3 → modifier fires
+
+    surcharge per night = (120 × 20) / 100 = €24
+    2-night stay surcharge = 2 × €24 = €48
+
+    subtotal (base) = 2 × €120 = €240
+    total_price = €240 + €48 = €288
+    ```
+
+    <Warning>
+      Last-minute surcharges can significantly increase the price for same-day or next-day bookings. The `total_price` in results always includes this surcharge if it applies to your booking date.
+    </Warning>
+  </Tab>
+
+  <Tab title="Extra guest">
+    ### Extra-guest surcharge
+
+    This modifier adds a surcharge for each guest above a room's `base_occupancy`. It fires when `(adults + children) > base_occupancy`, and is applied night by night across the full stay.
+
+    **Trigger condition:** `guests_above_base` — the threshold above which extra guests are counted.
+
+    ```
+    extraGuests = max(0, (adults + children) − base_occupancy)
+    ```
+
+    The modifier fires when `extraGuests > guests_above_base` (typically `guests_above_base` is set to match `base_occupancy`, so any guest above the base count triggers it).
+
+    **This is a surcharge modifier** — it applies on top of discounts and is not subject to the one-discount rule.
+
+    **Adjustment basis:** The surcharge scales with the number of extra guests. For `flat` adjustments, the amount is multiplied by `extraGuests` per night. For `percent`, the percentage of `base_price` is multiplied by `extraGuests` per night.
+
+    | Adjustment type | Per-night surcharge formula |
+    |---|---|
+    | `flat` | `adjustment_value × extraGuests` |
+    | `percent` | `(base_price × adjustment_value × extraGuests) / 100` |
+
+    **Example scenario — flat surcharge:**
+
+    A room has `base_occupancy: 1`, base price €100/night. The modifier has `adjustment_type: flat`, `adjustment_value: 25`.
+
+    You search for 2 adults, 1 child (3 total), 3-night stay:
+
+    ```
+    extraGuests = max(0, 3 − 1) = 2
+
+    surcharge per night = 25 × 2 = €50
+    total surcharge = €50 × 3 nights = €150
+
+    subtotal (base) = 3 × €100 = €300
+    total_price = €300 + €150 = €450
+    ```
+
+    **Example scenario — percent surcharge:**
+
+    Same room, but `adjustment_type: percent`, `adjustment_value: 10`. Same party and stay:
+
+    ```
+    surcharge per night = (100 × 10 × 2) / 100 = €20
+    total surcharge = €20 × 3 = €60
+
+    total_price = €300 + €60 = €360
+    ```
+
+    See the [guest management guide](/guides/guest-management) for a full explanation of how `base_occupancy`, `max_adults`, and `max_children` interact.
+  </Tab>
+</Tabs>
+
+---
+
+## Modifier interaction: discount priority
+
+When a rate plan has both a `length_of_stay` and an `early_bird` modifier and you qualify for both, only one fires. The engine processes modifiers in ascending `sort_order` and skips any second discount type once a discount has already been applied.
+
+**Example:**
+
+| `sort_order` | Type | Trigger | Discount |
+|---|---|---|---|
+| 1 | `early_bird` | Book 30+ days ahead | −10% |
+| 2 | `length_of_stay` | Stay 7+ nights | −5% |
+
+You book 40 days in advance for a 10-night stay — you qualify for both. Because `early_bird` has `sort_order: 1`, it fires first. The engine then skips `length_of_stay` since a discount has already been applied.
+
+**You receive the early-bird discount only.**
+
+Reverse the sort order numbers and the length-of-stay discount would win instead.
+
+<Note>
+  Surcharge modifiers (`day_of_week`, `last_minute`, `extra_guest`) are never skipped. The one-discount rule applies exclusively to `length_of_stay` and `early_bird`.
+</Note>
+
+---
+
+## Summary reference
+
+<AccordionGroup>
+  <Accordion title="day_of_week">
+    **Type:** Surcharge | **Scope:** Per night
+
+    Adds a surcharge to specific days of the week. Evaluated against the calendar date of each individual night.
+
+    Trigger field: `days_of_week` (array of integers, 0 = Sunday, 6 = Saturday)
+  </Accordion>
+
+  <Accordion title="length_of_stay">
+    **Type:** Discount | **Scope:** Booking level
+
+    Reduces total price when the stay meets a minimum night count. Applied against `subtotal`. Subject to the one-discount-per-booking rule.
+
+    Trigger field: `min_nights`
+  </Accordion>
+
+  <Accordion title="early_bird">
+    **Type:** Discount | **Scope:** Booking level
+
+    Reduces total price when you book far enough in advance. Applied against `subtotal`. Subject to the one-discount-per-booking rule.
+
+    Trigger field: `days_before_arrival`
+  </Accordion>
+
+  <Accordion title="last_minute">
+    **Type:** Surcharge | **Scope:** Per night
+
+    Adds a surcharge when you book close to arrival. Applied per night against each night's `base_price`. Always fires if eligible — not subject to the discount rule.
+
+    Trigger field: `days_till_arrival`
+  </Accordion>
+
+  <Accordion title="extra_guest">
+    **Type:** Surcharge | **Scope:** Per night × extra guests
+
+    Adds a per-night surcharge for each guest above `base_occupancy`. Scales with the number of extra guests. Always fires if eligible — not subject to the discount rule.
+
+    Trigger field: `guests_above_base`
+  </Accordion>
+</AccordionGroup>
